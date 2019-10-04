@@ -24,6 +24,8 @@ MUTATION_TEST_COUNT_COL_NAME = 'Mutation_Test_Count'
 MUTATION_KMER_COUNT_COL_NAME = 'Mutation_Kmer_Count'
 REJECT_NULL_CONTROL_COL_NAME = 'Reject_Null_Control'
 REJECT_NULL_TEST_COL_NAME = 'Reject_Null_Test'
+CONTROL_P_VALUE_COL_NAME = 'Control_P_Val'
+TEST_P_VALUE_COL_NAME = 'Test_P_Val'
 VARIANT_CALL_COL_NAME = 'Variant_Call'
 WILDTYPE_UNIQUE_COUNT_COL_NAME = 'Wildtype_Unique_Count'
 MUTATION_ZERO_COUNT_COL_NAME = 'Mutation_Zero_Count'
@@ -69,6 +71,7 @@ def get_arg_parser():
 	parser.add_argument('-m', '--microsatellite', action='store_true', help='Flag indicating if doing microsequence analysis with respective vcf file')
 	parser.add_argument('-r', '--rna', action='store_true', help='Flag indicating if doing RNA analysis')
 	parser.add_argument('-poi', '--poisson', action='store_true', help='Flag indicating if using doing poisson distribution for variant analysis')
+	parser.add_argument('-a', '--alpha', dest='alpha', default=0.01, help='Alpha value used in hypothesis testing')
 	return parser
 
 
@@ -137,13 +140,13 @@ def create_jellyfish(args):
 	return test_output_filename, control_output_filename
 
 
-def setup_output_directory(output_folder_name, reference_genome_fasta_file, kmer_size):
-	global GENOME_JELLYFISH
-	global GENOME_FASTA
+def setup_output_directory(output_folder_name, reference_genome_fasta_file, kmer_size, alpha):
+	global GENOME_JELLYFISH, GENOME_FASTA, ALPHA
 	logging.info('Setting up output directory.')
 	if os.path.isdir(output_folder_name): shutil.rmtree(output_folder_name)	# remove existing output folder if it exists
 	output_path = os.path.join(CWD, output_folder_name)
 	os.mkdir(output_path)
+	ALPHA = alpha
 	if reference_genome_fasta_file: 
 		GENOME_FASTA = reference_genome_fasta_file	# update genome fasta given user provided input
 		filename, file_extension = os.path.splitext(GENOME_FASTA)
@@ -560,6 +563,7 @@ def hypothesis_test(variant_info_dataframe, kmer_size, using_poisson, using_cont
 
 	control_variant_indices, test_variant_indices = [], []
 	control_normal_indices = []
+	control_p_values, test_p_values = {}, {}
 	# Select control variants. selects the entries for which we accept the hypothesis M_N = 0
 	for index, row in variant_info_dataframe.iterrows():
 		is_indel = row[WILDTYPE_SEQUENCE_COL_NAME] == '-' or row[MUTATION_SEQUENCE_COL_NAME] == '-'
@@ -573,6 +577,9 @@ def hypothesis_test(variant_info_dataframe, kmer_size, using_poisson, using_cont
 				binomial_cdf(np.int(row[MUTATION_CONTROL_COUNT_COL_NAME]), np.int(total_control_kmer_count), sequence_error_probability)
 			if p_value < ALPHA: control_variant_indices.append(index)
 			else: control_normal_indices.append(index)
+			control_p_values[index] = p_value
+		else:
+			control_p_values[index] = '-' 
 
 	# Among the entries for which we accept the first hypothesis, we select the entries for which we reject the hypothesis M_T = 0
 	for index, row in variant_info_dataframe.iterrows():
@@ -585,19 +592,28 @@ def hypothesis_test(variant_info_dataframe, kmer_size, using_poisson, using_cont
 			p_value = poisson_cdf(np.int(row[MUTATION_TEST_COUNT_COL_NAME]), np.int(mutation_count_mean_estimate)) if using_poisson else \
 				binomial_cdf(np.int(row[MUTATION_TEST_COUNT_COL_NAME]), np.int(total_test_kmer_count), sequence_error_probability)
 			if p_value < ALPHA: test_variant_indices.append(index)
+			test_p_values[index] = p_value
+		else:
+			test_p_values[index] = '-' 
 
 	reject_null_control_variants, reject_null_test_variants, variant_calls= [], [], []
+	control_p_value_list, test_p_value_list = [], []
 	for index in range(variant_info_dataframe.shape[0]):
 		reject_null_control_value = True if index in control_variant_indices else False
 		reject_null_test_value = True if index in test_variant_indices else False
 		variant_call_value = not reject_null_control_value and reject_null_test_value # Need reject_null_control = False and reject_null_test = True 
+		variant_call_value = 'PASS' if variant_call_value else 'FAIL'
 		reject_null_control_variants.append(reject_null_control_value)
 		reject_null_test_variants.append(reject_null_test_value)
 		variant_calls.append(variant_call_value)
-
+		control_p_value_list.append(control_p_values[index])
+		test_p_value_list.append(test_p_values[index])
+	
 	variant_info_dataframe.insert(1, VARIANT_CALL_COL_NAME, variant_calls)
 	variant_info_dataframe.insert(2, REJECT_NULL_CONTROL_COL_NAME, reject_null_control_variants)
-	variant_info_dataframe.insert(3, REJECT_NULL_TEST_COL_NAME, reject_null_test_variants)
+	variant_info_dataframe.insert(3, CONTROL_P_VALUE_COL_NAME, control_p_value_list)
+	variant_info_dataframe.insert(4, REJECT_NULL_TEST_COL_NAME, reject_null_test_variants)
+	variant_info_dataframe.insert(5, TEST_P_VALUE_COL_NAME, test_p_value_list)
 	output_path = os.path.join(CWD, output_name)
 	variant_info_dataframe.to_csv(os.path.join(output_path, 'variant_info_summary.txt'), sep='\t', index=False)
 	return variant_info_dataframe
@@ -646,6 +662,7 @@ def create_variant_call_summary_table(variant_call_info_dataframe, command_args,
 		output.write('Control_Estimated_Sequencing_Coverage:{}\n'.format(control_sequencing_coverage))
 		output.write('Test_Estimated_Sequencing_Coverage:{}\n'.format(test_sequencing_coverage))
 		variant_type_counts.to_csv(output, sep=':', index=True)
+		output.write('Alpha:{}\n'.format(ALPHA))
 		variant_call_info_dataframe.to_csv(output, sep='\t', index=True)
 
 #############################################################
