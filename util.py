@@ -602,7 +602,7 @@ def hypothesis_test(variant_info_dataframe, kmer_size, using_poisson, using_cont
 		reject_null_control_value = True if index in control_variant_indices else False
 		reject_null_test_value = True if index in test_variant_indices else False
 		variant_call_value = not reject_null_control_value and reject_null_test_value # Need reject_null_control = False and reject_null_test = True 
-		variant_call_value = 'PASS' if variant_call_value else 'FAIL'
+		variant_call_value = True if variant_call_value else False
 		reject_null_control_variants.append(reject_null_control_value)
 		reject_null_test_variants.append(reject_null_test_value)
 		variant_calls.append(variant_call_value)
