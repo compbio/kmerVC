@@ -566,8 +566,9 @@ def hypothesis_test(variant_info_dataframe, kmer_size, using_poisson, using_cont
 	control_p_values, test_p_values = {}, {}
 	# Select control variants. selects the entries for which we accept the hypothesis M_N = 0
 	for index, row in variant_info_dataframe.iterrows():
-		is_indel = row[WILDTYPE_SEQUENCE_COL_NAME] == '-' or row[MUTATION_SEQUENCE_COL_NAME] == '-'
-		#power = abs(len(row[WILDTYPE_SEQUENCE_COL_NAME]) - len(row[MUTATION_SEQUENCE_COL_NAME])) + 1 if is_indel else 1
+		wildtype, mutation = row[VARIANT_COL_NAME].split('_')[3:5]
+		is_indel = wildtype == '-' or mutation == '-'
+		#power = abs(len(wildtype) - len(mutation)) + 1 if is_indel else 1
 		power = 1
 		sequence_error_probability = np.power(SEQUENCE_ERROR_PROBABILITY, power)
 		total_control_kmer_count = row[WILDTYPE_CONTROL_COUNT_COL_NAME] + row[MUTATION_CONTROL_COUNT_COL_NAME]
@@ -584,8 +585,9 @@ def hypothesis_test(variant_info_dataframe, kmer_size, using_poisson, using_cont
 
 	# Among the entries for which we accept the first hypothesis, we select the entries for which we reject the hypothesis M_T = 0
 	for index, row in variant_info_dataframe.iterrows():
-		is_indel = row[WILDTYPE_SEQUENCE_COL_NAME] == '-' or row[MUTATION_SEQUENCE_COL_NAME] == '-'
-		#power = abs(len(row[WILDTYPE_SEQUENCE_COL_NAME]) - len(row[MUTATION_SEQUENCE_COL_NAME])) + 1 if is_indel else 1
+		wildtype, mutation = row[VARIANT_COL_NAME].split('_')[3:5]
+		is_indel = wildtype == '-' or mutation == '-'
+		#power = abs(len(wildtype) - len(mutation)) + 1 if is_indel else 1
 		power = 1
 		sequence_error_probability = np.power(SEQUENCE_ERROR_PROBABILITY, power)
 		total_test_kmer_count = row[WILDTYPE_TEST_COUNT_COL_NAME] + row[MUTATION_TEST_COUNT_COL_NAME]
