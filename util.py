@@ -71,7 +71,7 @@ def get_arg_parser():
 	parser.add_argument('-m', '--microsatellite', action='store_true', help='Flag indicating if doing microsequence analysis with respective vcf file')
 	parser.add_argument('-r', '--rna', action='store_true', help='Flag indicating if doing RNA analysis')
 	parser.add_argument('-poi', '--poisson', action='store_true', help='Flag indicating if using doing poisson distribution for variant analysis')
-	parser.add_argument('-a', '--alpha', dest='alpha', default=0.01, help='Alpha value used in hypothesis testing')
+	parser.add_argument('-a', '--alpha', dest='alpha', default=0.01, type=float, help='Alpha value used in hypothesis testing')
 	return parser
 
 
