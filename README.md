@@ -3,12 +3,12 @@ This repo contains the kmerVC software scripts that function to evaluate the som
 
 ## Requirements
 This code has been tested with the following software versions:
-> Python 2.7.13
-> Pandas 0.20.3
-> Numpy 1.13.1
-> Scipy 0.19.1
-> Bedtools 2.25.0
-> Jellyfish 2.2.6
+> Python 2.7.13 
+> Pandas 0.20.3 
+> Numpy 1.13.1 
+> Scipy 0.19.1 
+> Bedtools 2.25.0 
+> Jellyfish 2.2.6 
 
 Aside from bedtools and Jellyfish, we recommend the using the Anaconda Python Distribution to install all the required packages. The standard instructions from the providers of each package can be used. As for bedtools and Jellyfish, the respective installation instructions are outlined below:
 
