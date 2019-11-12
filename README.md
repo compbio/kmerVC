@@ -34,11 +34,7 @@ conda install -c bioconda bedtools
 ### Jellyfish
 The k-mer counting command line program can be installed from their respective github release at: https://github.com/gmarcais/Jellyfish
 
-### Testing
+### Examples
 
-You can test your installation of kmerVC on the examples in the test directory. The tests were fashioned as a shell script that calls the kmerVC program and can be run as follows:
+You can test your installation of kmerVC on the examples in the examples directory. The corresponding example directories carry respective instructions.
 
-```
-cd test
-bash run_test.sh
-```
