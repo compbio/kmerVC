@@ -21,7 +21,7 @@ def perform_compare(args):
 	kmer_frequency_files = query_sequences(wildtype_sequence_file, mutation_sequence_file, args.output_name, jellyfish_test, jellyfish_control)
 	variant_info_dataframe = construct_variant_information_table(kmer_frequency_files, args.kmer_size, jellyfish_control, wildtype_sequence_file, mutation_sequence_file)
 	variant_call_info_dataframe = hypothesis_test(variant_info_dataframe, args.kmer_size, args.poisson, jellyfish_control, args.output_name)
-	create_variant_call_summary_table(variant_call_info_dataframe, sys.argv, kmer_frequency_files, args.output_name, original_dataframe)
+	create_variant_call_summary_table(variant_call_info_dataframe, sys.argv, kmer_frequency_files, args.output_name, original_dataframe, jellyfish_control)
 
 def construct_variants_dataframe(args):
 	# Construct a dataframe of the input vcf/bed file, retaining columns of the chromosome name,

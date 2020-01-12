@@ -446,13 +446,10 @@ def query_sequences(wildtype_sequence_file, mutation_sequence_file, output_name,
 def construct_variant_information_table(kmer_frequency_files, kmer_size, using_control_sample, wildtype_path, mutation_path):
 	#TODO refactor this function
 	test_wildtype_file, test_mutation_file, control_wildtype_file, control_mutation_file, genome_wildtype_file, genome_mutation_file = kmer_frequency_files
-
 	wildtype_in_genome, mutation_in_genome = dict_from_kmer_counts(genome_wildtype_file), dict_from_kmer_counts(genome_mutation_file)
+	wildtype_in_test, mutation_in_test = dict_from_kmer_counts(test_wildtype_file), dict_from_kmer_counts(test_mutation_file)
 	if using_control_sample:
 		wildtype_in_control, mutation_in_control = dict_from_kmer_counts(control_wildtype_file), dict_from_kmer_counts(control_mutation_file)
-		wildtype_in_test, mutation_in_test = dict_from_kmer_counts(test_wildtype_file), dict_from_kmer_counts(test_mutation_file)
-	else:
-		wildtype_in_control, mutation_in_control = dict_from_kmer_counts(test_wildtype_file), dict_from_kmer_counts(test_mutation_file)
 
 	wildtype_sequences_file, mutation_sequences_file = open(wildtype_path, 'r'), open(mutation_path, 'r')
 	sequences = { entry.rstrip().split('\n')[0]: [entry.rstrip().split('\n')[1]] for entry in wildtype_sequences_file.read().split('>')[1:] }
@@ -468,75 +465,72 @@ def construct_variant_information_table(kmer_frequency_files, kmer_size, using_c
 		wildtype_kmers = set([wildtype_sequence[i : i + kmer_size] for i in range(len(wildtype_sequence) - kmer_size + 1)])
 		mutation_kmers = [mutation_sequence[i : i + kmer_size] for i in range(len(mutation_sequence) - kmer_size + 1)]
 		mutation_kmers = [kmer for kmer in mutation_kmers if kmer not in wildtype_kmers]	# remove kmer in mutation_kmers that exists in wildtpye_kmers
+
 		if using_control_sample:
-			normal_out = [
-				(kmer, wildtype_in_control[kmer], wildtype_in_test[kmer]) if kmer in wildtype_in_control
-				else (kmer, wildtype_in_control[reverse_complement(kmer)], wildtype_in_test[reverse_complement(kmer)])
-				for kmer in wildtype_kmers
-			]
-			tumor_out = [
-				(kmer, mutation_in_control[kmer], mutation_in_test[kmer]) if kmer in mutation_in_control
-				else (kmer, mutation_in_control[reverse_complement(kmer)], mutation_in_test[reverse_complement(kmer)])
-				for kmer in mutation_kmers
-			]
+			wildtype_out = [ (kmer, wildtype_in_control[kmer], wildtype_in_test[kmer]) if kmer in wildtype_in_test
+							else (kmer, wildtype_in_control[reverse_complement(kmer)], wildtype_in_test[reverse_complement(kmer)])
+							for kmer in wildtype_kmers ]
+			mutation_out = [ (kmer, mutation_in_control_count, mutation_in_test_count) if kmer in mutation_in_test
+							else (kmer, mutation_in_control[reverse_complement(kmer)], mutation_in_test[reverse_complement(kmer)])
+							for kmer in mutation_kmers ]
 		else:
-			normal_out = [
-				(kmer, wildtype_in_normal[kmer]) if kmer in wildtype_in_normal
-				else (kmer, wildtype_in_normal[reverseComplement(kmer)])
-				for kmer in wildtype_kmers
-			]
-			tumor_out = [
-				(kmer, mutation_in_control[kmer]) if kmer in mutation_in_control
-				else (kmer, mutation_in_control[reverse_complement(kmer)])
-				for kmer in mutation_kmers
-			]
-
-		kmer_counts_per_variant[variant] = (normal_out, tumor_out)
-
+			wildtype_out = [ (kmer, None, wildtype_in_test[kmer]) if kmer in wildtype_in_test
+							else (kmer, None, wildtype_in_test[reverse_complement(kmer)])
+							for kmer in wildtype_kmers ]
+			mutation_out = [ (kmer, None, mutation_in_test[kmer]) if kmer in mutation_in_test
+							else (kmer, None, mutation_in_test[reverse_complement(kmer)])
+							for kmer in mutation_kmers ]
+		kmer_counts_per_variant[variant] = (wildtype_out, mutation_out)
+	
 	wildtype_sequences_file, mutation_sequences_file = open(wildtype_path, 'r'), open(mutation_path, 'r')
 	wildtype_sequences = { entry.rstrip().split('\n')[0]: entry.rstrip().split('\n')[1] for entry in wildtype_sequences_file.read().split('>')[1:] }
 	mutation_sequences = { entry.rstrip().split('\n')[0]: entry.rstrip().split('\n')[1] for entry in mutation_sequences_file.read().split('>')[1:] }
 	wildtype_sequences_file.close(); mutation_sequences_file.close()
 	all_entries = []
+
+	def get_median(counts): return 0 if len(counts) == 0 else round(np.median(counts), 3)
+
 	for variant in kmer_counts_per_variant:
 		wildtype_unique, mutation_zero = [], []
 		wildtype_kmers, mutation_kmers = kmer_counts_per_variant[variant]
 		for kmer_info in wildtype_kmers:
 			kmer = kmer_info[0] if kmer_info[0] in wildtype_in_genome else reverse_complement(kmer_info[0])
-			if wildtype_in_genome[kmer] == 1: wildtype_unique.append((float(kmer_info[1]), float(kmer_info[2])))
+			if wildtype_in_genome[kmer] == 1: wildtype_unique.append((kmer_info[1], kmer_info[2]))
 		for kmer_info in mutation_kmers:
 			kmer = kmer_info[0] if kmer_info[0] in mutation_in_genome else reverse_complement(kmer_info[0])
-			if mutation_in_genome[kmer] == 0: mutation_zero.append((float(kmer_info[1]), float(kmer_info[2])))
+			if mutation_in_genome[kmer] == 0: mutation_zero.append((kmer_info[1], kmer_info[2]))
+		# in_control lists composed of Nones when not using control_sample
 		wildtype_in_control, wildtype_in_test = [count[0] for count in wildtype_unique], [count[1] for count in wildtype_unique]
 		mutation_in_control, mutation_in_test = [count[0] for count in mutation_zero], [count[1] for count in mutation_zero]
 
-		def get_median(counts): return 0 if len(counts) == 0 else round(np.median(counts), 3)
-		#TODO Fix not using control sample case
 		wildtype_control_median, wildtype_test_median, mutation_control_median, mutation_test_median = 0, 0, 0, 0
 		is_sufficient_data = True if len(wildtype_unique) >= SUFFICIENT_DATA_MINIMUM_KMERS and len(mutation_zero) >= SUFFICIENT_DATA_MINIMUM_KMERS else False
 		if is_sufficient_data:
-			wildtype_control_median, wildtype_test_median = get_median(wildtype_in_control), get_median(wildtype_in_test)
-			mutation_control_median, mutation_test_median = get_median(mutation_in_control), get_median(mutation_in_test)
+			wildtype_in_test, mutation_in_test = [float(x) for x in wildtype_in_test], [float(x) for x in mutation_in_test]
+			wildtype_test_median, mutation_test_median = get_median(wildtype_in_test), get_median(mutation_in_test)
+			if using_control_sample:
+				wildtype_in_control, mutation_in_control = [float(x) for x in wildtype_in_control], [float(x) for x in mutation_in_control]
+				wildtype_control_median, mutation_control_median = get_median(wildtype_in_control), get_median(mutation_in_control)
 
-		# TODO: add to table when verbose flag is passed
-		all_wildtype_in_control_counts = None if len(wildtype_in_control) == 0 else '|'.join([str(count) for count in wildtype_in_control])
-		all_mutation_in_test_counts = None if len(mutation_in_test) == 0 else '|'.join([str(count) for count in mutation_in_test])
+		#all_wildtype_in_control_counts = None if len(wildtype_in_control) == 0 else '|'.join([str(count) for count in wildtype_in_control])
+		#all_mutation_in_test_counts = None if len(mutation_in_test) == 0 else '|'.join([str(count) for count in mutation_in_test])
 		new_entry = {
 				VARIANT_COL_NAME: variant,
 				WILDTYPE_SEQUENCE_COL_NAME: wildtype_sequences[variant],
-				WILDTYPE_CONTROL_COUNT_COL_NAME: wildtype_control_median,
 				WILDTYPE_TEST_COUNT_COL_NAME: wildtype_test_median,
 				WILDTYPE_KMER_COUNT_COL_NAME: len(wildtype_sequences[variant]) - (kmer_size - 1),
 				MUTATION_SEQUENCE_COL_NAME: mutation_sequences[variant],
-				MUTATION_CONTROL_COUNT_COL_NAME: mutation_control_median,
 				MUTATION_TEST_COUNT_COL_NAME: mutation_test_median,
 				MUTATION_KMER_COUNT_COL_NAME: len(mutation_sequences[variant]) - (kmer_size - 1),
 				WILDTYPE_UNIQUE_COUNT_COL_NAME: len(wildtype_unique),
 				MUTATION_ZERO_COUNT_COL_NAME: len(mutation_zero),
-				}
+		}
+		if using_control_sample:
+			new_entry[WILDTYPE_CONTROL_COUNT_COL_NAME] = wildtype_control_median	
+			new_entry[MUTATION_CONTROL_COUNT_COL_NAME] = mutation_control_median	
 		all_entries.append(new_entry)
 
-	variant_info_dataframe = pd.DataFrame(all_entries, columns=[
+	all_columns = [
 		VARIANT_COL_NAME,
 		WILDTYPE_SEQUENCE_COL_NAME,
 		WILDTYPE_CONTROL_COUNT_COL_NAME,
@@ -547,7 +541,11 @@ def construct_variant_information_table(kmer_frequency_files, kmer_size, using_c
 		MUTATION_TEST_COUNT_COL_NAME,
 		MUTATION_KMER_COUNT_COL_NAME,
 		WILDTYPE_UNIQUE_COUNT_COL_NAME,
-		MUTATION_ZERO_COUNT_COL_NAME])
+		MUTATION_ZERO_COUNT_COL_NAME]
+	if not using_control_sample:
+		all_columns = [column for column in all_columns if column not in [WILDTYPE_CONTROL_COUNT_COL_NAME, MUTATION_CONTROL_COUNT_COL_NAME]]
+
+	variant_info_dataframe = pd.DataFrame(all_entries, columns=all_columns)
 	return variant_info_dataframe
 
 
@@ -561,82 +559,123 @@ def hypothesis_test(variant_info_dataframe, kmer_size, using_poisson, using_cont
 	# P(X >= k) for binomial distributed random variable X with probability prob
 	def binomial_cdf(k, n, p): return 1.0 - stats.binom.cdf(k - 1, n, p)
 
-	control_variant_indices, test_variant_indices = [], []
-	control_normal_indices = []
-	control_p_values, test_p_values = {}, {}
-	# Select control variants. selects the entries for which we accept the hypothesis M_N = 0
-	for index, row in variant_info_dataframe.iterrows():
-		wildtype, mutation = row[VARIANT_COL_NAME].split('_')[3:5]
-		is_indel = wildtype == '-' or mutation == '-'
-		#power = abs(len(wildtype) - len(mutation)) + 1 if is_indel else 1
-		power = 1
-		sequence_error_probability = np.power(SEQUENCE_ERROR_PROBABILITY, power)
-		total_control_kmer_count = row[WILDTYPE_CONTROL_COUNT_COL_NAME] + row[MUTATION_CONTROL_COUNT_COL_NAME]
-		mutation_count_mean_estimate = total_control_kmer_count * np.power(1 - sequence_error_probability, kmer_size - 1) * (sequence_error_probability / 3)
-
-		if np.int(row[MUTATION_CONTROL_COUNT_COL_NAME]) > 0: # Need > 0 trials to perform binomial test
-			p_value = poisson_cdf(np.int(row[MUTATION_CONTROL_COUNT_COL_NAME]), np.int(mutation_count_mean_estimate)) if using_poisson else \
-				binomial_cdf(np.int(row[MUTATION_CONTROL_COUNT_COL_NAME]), np.int(total_control_kmer_count), sequence_error_probability)
-			if p_value < ALPHA: control_variant_indices.append(index)
-			else: control_normal_indices.append(index)
-			control_p_values[index] = p_value
-		else:
-			control_p_values[index] = '-' 
-
-	# Among the entries for which we accept the first hypothesis, we select the entries for which we reject the hypothesis M_T = 0
-	for index, row in variant_info_dataframe.iterrows():
-		wildtype, mutation = row[VARIANT_COL_NAME].split('_')[3:5]
-		is_indel = wildtype == '-' or mutation == '-'
-		#power = abs(len(wildtype) - len(mutation)) + 1 if is_indel else 1
-		power = 1
-		sequence_error_probability = np.power(SEQUENCE_ERROR_PROBABILITY, power)
-		total_test_kmer_count = row[WILDTYPE_TEST_COUNT_COL_NAME] + row[MUTATION_TEST_COUNT_COL_NAME]
-		mutation_count_mean_estimate = total_test_kmer_count * np.power(1 - sequence_error_probability, kmer_size - 1) * (sequence_error_probability / 3)
-		if np.int(row[MUTATION_TEST_COUNT_COL_NAME]) > 0: # Need > 0 trials to perform binomial test
-			p_value = poisson_cdf(np.int(row[MUTATION_TEST_COUNT_COL_NAME]), np.int(mutation_count_mean_estimate)) if using_poisson else \
-				binomial_cdf(np.int(row[MUTATION_TEST_COUNT_COL_NAME]), np.int(total_test_kmer_count), sequence_error_probability)
-			if p_value < ALPHA: test_variant_indices.append(index)
-			test_p_values[index] = p_value
-		else:
-			test_p_values[index] = '-' 
-
-	reject_null_control_variants, reject_null_test_variants, variant_calls= [], [], []
-	control_p_value_list, test_p_value_list = [], []
-	for index in range(variant_info_dataframe.shape[0]):
-		reject_null_control_value = True if index in control_variant_indices else False
-		reject_null_test_value = True if index in test_variant_indices else False
-		variant_call_value = not reject_null_control_value and reject_null_test_value # Need reject_null_control = False and reject_null_test = True 
-		variant_call_value = True if variant_call_value else False
-		reject_null_control_variants.append(reject_null_control_value)
-		reject_null_test_variants.append(reject_null_test_value)
-		variant_calls.append(variant_call_value)
-		control_p_value_list.append(control_p_values[index])
-		test_p_value_list.append(test_p_values[index])
+	if using_control_sample:
+		control_variant_indices, test_variant_indices = [], []
+		control_normal_indices = []
+		control_p_values, test_p_values = {}, {}
+		# Select control variants. selects the entries for which we accept the hypothesis M_N = 0
+		for index, row in variant_info_dataframe.iterrows():
+			wildtype, mutation = row[VARIANT_COL_NAME].split('_')[3:5]
+			is_indel = wildtype == '-' or mutation == '-'
+			#power = abs(len(wildtype) - len(mutation)) + 1 if is_indel else 1
+			power = 1
+			sequence_error_probability = np.power(SEQUENCE_ERROR_PROBABILITY, power)
+			total_control_kmer_count = row[WILDTYPE_CONTROL_COUNT_COL_NAME] + row[MUTATION_CONTROL_COUNT_COL_NAME]
+			mutation_count_mean_estimate = total_control_kmer_count * np.power(1 - sequence_error_probability, kmer_size - 1) * (sequence_error_probability / 3)
 	
-	variant_info_dataframe.insert(1, VARIANT_CALL_COL_NAME, variant_calls)
-	variant_info_dataframe.insert(2, REJECT_NULL_CONTROL_COL_NAME, reject_null_control_variants)
-	variant_info_dataframe.insert(3, CONTROL_P_VALUE_COL_NAME, control_p_value_list)
-	variant_info_dataframe.insert(4, REJECT_NULL_TEST_COL_NAME, reject_null_test_variants)
-	variant_info_dataframe.insert(5, TEST_P_VALUE_COL_NAME, test_p_value_list)
-	output_path = os.path.join(CWD, output_name)
-	variant_info_dataframe.to_csv(os.path.join(output_path, 'variant_info_summary.txt'), sep='\t', index=False)
-	return variant_info_dataframe
+			if np.int(row[MUTATION_CONTROL_COUNT_COL_NAME]) > 0: # Need > 0 trials to perform binomial test
+				p_value = poisson_cdf(np.int(row[MUTATION_CONTROL_COUNT_COL_NAME]), np.int(mutation_count_mean_estimate)) if using_poisson else \
+					binomial_cdf(np.int(row[MUTATION_CONTROL_COUNT_COL_NAME]), np.int(total_control_kmer_count), sequence_error_probability)
+				if p_value < ALPHA: control_variant_indices.append(index)
+				else: control_normal_indices.append(index)
+				control_p_values[index] = p_value
+			else:
+				control_p_values[index] = '-' 
+	
+		# Among the entries for which we accept the first hypothesis, we select the entries for which we reject the hypothesis M_T = 0
+		for index, row in variant_info_dataframe.iterrows():
+			wildtype, mutation = row[VARIANT_COL_NAME].split('_')[3:5]
+			is_indel = wildtype == '-' or mutation == '-'
+			#power = abs(len(wildtype) - len(mutation)) + 1 if is_indel else 1
+			power = 1
+			sequence_error_probability = np.power(SEQUENCE_ERROR_PROBABILITY, power)
+			total_test_kmer_count = row[WILDTYPE_TEST_COUNT_COL_NAME] + row[MUTATION_TEST_COUNT_COL_NAME]
+			mutation_count_mean_estimate = total_test_kmer_count * np.power(1 - sequence_error_probability, kmer_size - 1) * (sequence_error_probability / 3)
+			if np.int(row[MUTATION_TEST_COUNT_COL_NAME]) > 0: # Need > 0 trials to perform binomial test
+				p_value = poisson_cdf(np.int(row[MUTATION_TEST_COUNT_COL_NAME]), np.int(mutation_count_mean_estimate)) if using_poisson else \
+					binomial_cdf(np.int(row[MUTATION_TEST_COUNT_COL_NAME]), np.int(total_test_kmer_count), sequence_error_probability)
+				if p_value < ALPHA: test_variant_indices.append(index)
+				test_p_values[index] = p_value
+			else:
+				test_p_values[index] = '-' 
+	
+		reject_null_control_variants, reject_null_test_variants, variant_calls= [], [], []
+		control_p_value_list, test_p_value_list = [], []
+		for index in range(variant_info_dataframe.shape[0]):
+			reject_null_control_value = True if index in control_variant_indices else False
+			reject_null_test_value = True if index in test_variant_indices else False
+			variant_call_value = not reject_null_control_value and reject_null_test_value # Need reject_null_control = False and reject_null_test = True 
+			variant_call_value = True if variant_call_value else False
+			reject_null_control_variants.append(reject_null_control_value)
+			reject_null_test_variants.append(reject_null_test_value)
+			variant_calls.append(variant_call_value)
+			control_p_value_list.append(control_p_values[index])
+			test_p_value_list.append(test_p_values[index])
+		
+		variant_info_dataframe.insert(1, VARIANT_CALL_COL_NAME, variant_calls)
+		variant_info_dataframe.insert(2, REJECT_NULL_CONTROL_COL_NAME, reject_null_control_variants)
+		variant_info_dataframe.insert(3, CONTROL_P_VALUE_COL_NAME, control_p_value_list)
+		variant_info_dataframe.insert(4, REJECT_NULL_TEST_COL_NAME, reject_null_test_variants)
+		variant_info_dataframe.insert(5, TEST_P_VALUE_COL_NAME, test_p_value_list)
+		output_path = os.path.join(CWD, output_name)
+		variant_info_dataframe.to_csv(os.path.join(output_path, 'variant_info_summary.txt'), sep='\t', index=False)
 
-def create_variant_call_summary_table(variant_call_info_dataframe, command_args, kmer_frequency_files, output_name, original_dataframe):
+	else:
+		test_variant_indices, test_normal_indices, test_p_values = [], [], {}
+		# Select control variants. selects the entries for which we accept the hypothesis M_N = 0
+		for index, row in variant_info_dataframe.iterrows():
+			wildtype, mutation = row[VARIANT_COL_NAME].split('_')[3:5]
+			is_indel = wildtype == '-' or mutation == '-'
+			#power = abs(len(wildtype) - len(mutation)) + 1 if is_indel else 1
+			power = 1
+			sequence_error_probability = np.power(SEQUENCE_ERROR_PROBABILITY, power)
+			total_test_kmer_count = row[WILDTYPE_TEST_COUNT_COL_NAME] + row[MUTATION_TEST_COUNT_COL_NAME]
+			mutation_count_mean_estimate = total_test_kmer_count * np.power(1 - sequence_error_probability, kmer_size - 1) * (sequence_error_probability / 3)
+			
+			if np.int(row[MUTATION_TEST_COUNT_COL_NAME]) > 0: # Need > 0 trials to perform binomial test
+				p_value = poisson_cdf(np.int(row[MUTATION_CONTROL_COUNT_COL_NAME]), np.int(mutation_count_mean_estimate)) if using_poisson else \
+					binomial_cdf(np.int(row[MUTATION_TEST_COUNT_COL_NAME]), np.int(total_test_kmer_count), sequence_error_probability)
+				if p_value < ALPHA: test_variant_indices.append(index)
+				else: test_variant_indices.append(index)
+				test_p_values[index] = p_value
+			else:
+				test_p_values[index] = '-' 
+
+
+		reject_null_test_variants, variant_calls = [], []
+		test_p_value_list = []
+		for index in range(variant_info_dataframe.shape[0]):
+			reject_null_test_value = True if index in test_variant_indices else False
+			variant_call_value = reject_null_test_value
+			reject_null_test_variants.append(reject_null_test_value)
+			variant_calls.append(variant_call_value)
+			test_p_value_list.append(test_p_values[index])
+		
+		variant_info_dataframe.insert(1, VARIANT_CALL_COL_NAME, variant_calls)
+		variant_info_dataframe.insert(2, REJECT_NULL_TEST_COL_NAME, reject_null_test_variants)
+		variant_info_dataframe.insert(3, TEST_P_VALUE_COL_NAME, test_p_value_list)
+		output_path = os.path.join(CWD, output_name)
+		variant_info_dataframe.to_csv(os.path.join(output_path, 'variant_info_summary.txt'), sep='\t', index=False)
+
+	return variant_info_dataframe
+	
+def create_variant_call_summary_table(variant_call_info_dataframe, command_args, kmer_frequency_files, output_name, original_dataframe, using_control_sample):
 	def estimate_sequencing_coverage():	# TODO: Use only unique kmers
 		test_wildtype_file, test_mutation_file, control_wildtype_file, control_mutation_file, genome_wildtype_file, genome_mutation_file = kmer_frequency_files
 		wildtype_in_genome = dict_from_kmer_counts(genome_wildtype_file)
-		control_counts_dataframe = pd.read_csv(control_wildtype_file, sep=' ', header=None, names=['Kmer', 'Count']) if control_wildtype_file != None else None
 		test_counts_dataframe = pd.read_csv(test_wildtype_file, sep=' ', header=None, names=['Kmer', 'Count'])
-		control_counts_dataframe['Genome_Count'] = control_counts_dataframe['Kmer'].apply(lambda kmer: wildtype_in_genome[kmer] if kmer in wildtype_in_genome else wildtype_in_genome[reverse_complement(kmer)]) if control_wildtype_file != None else None
 		test_counts_dataframe['Genome_Count'] = test_counts_dataframe['Kmer'].apply(lambda kmer: wildtype_in_genome[kmer] if kmer in wildtype_in_genome else wildtype_in_genome[reverse_complement(kmer)])
-		control_counts_dataframe = control_counts_dataframe[control_counts_dataframe['Genome_Count'] == 1] if control_wildtype_file != None else None
 		test_counts_dataframe = test_counts_dataframe[test_counts_dataframe['Genome_Count'] == 1]
-		control_sequencing_coverage = control_counts_dataframe['Count'].median() if control_wildtype_file != None else None
 		test_sequencing_coverage = test_counts_dataframe['Count'].median()
+		control_sequencing_coverage = None
+		if using_control_sample:
+			control_counts_dataframe = pd.read_csv(control_wildtype_file, sep=' ', header=None, names=['Kmer', 'Count']) if control_wildtype_file != None else None
+			control_counts_dataframe['Genome_Count'] = control_counts_dataframe['Kmer'].apply(lambda kmer: wildtype_in_genome[kmer] if kmer in wildtype_in_genome else wildtype_in_genome[reverse_complement(kmer)]) if control_wildtype_file != None else None
+			control_counts_dataframe = control_counts_dataframe[control_counts_dataframe['Genome_Count'] == 1] if control_wildtype_file != None else None
+			control_sequencing_coverage = control_counts_dataframe['Count'].median() if control_wildtype_file != None else None
 		return control_sequencing_coverage, test_sequencing_coverage
 	control_sequencing_coverage, test_sequencing_coverage = estimate_sequencing_coverage()
-	validated_call_minimum_required_count = stats.binom.ppf(1 - ALPHA, control_sequencing_coverage, SEQUENCE_ERROR_PROBABILITY)
+	validated_call_minimum_required_count = stats.binom.ppf(1 - ALPHA, test_sequencing_coverage, SEQUENCE_ERROR_PROBABILITY)	# TODO control/test coverage usage distinction
 	def is_sufficient_data(row): return row[WILDTYPE_UNIQUE_COUNT_COL_NAME] >= SUFFICIENT_DATA_MINIMUM_KMERS and row[MUTATION_ZERO_COUNT_COL_NAME] >= SUFFICIENT_DATA_MINIMUM_KMERS
 	def is_snp_affected(row): return is_sufficient_data(row) and row[WILDTYPE_CONTROL_COUNT_COL_NAME] < validated_call_minimum_required_count
 	def is_validated(row): return is_sufficient_data(row) and not is_snp_affected(row) and row[VARIANT_CALL_COL_NAME]
@@ -644,12 +683,18 @@ def create_variant_call_summary_table(variant_call_info_dataframe, command_args,
 	def is_multiple(row): return len(row[VARIANT_COL_NAME].split(',')) > 1
 	variant_types = []
 	for index, row in variant_call_info_dataframe.iterrows():
-		if is_snp_affected(row): variant_type = 'SNP'
-		elif not is_sufficient_data(row): variant_type = 'Insufficient'
-		elif is_validated(row): variant_type = 'Validated'
-		elif is_germline(row): variant_type = 'Germline'
-		else: variant_type = 'Invalidated'
-		if is_multiple(row): variant_type = '{}_Multiple'.format(variant_type)
+		if using_control_sample:
+			if is_snp_affected(row): variant_type = 'SNP'
+			elif not is_sufficient_data(row): variant_type = 'Insufficient'
+			elif is_validated(row): variant_type = 'Validated'
+			elif is_germline(row): variant_type = 'Germline'
+			else: variant_type = 'Invalidated'
+			if is_multiple(row): variant_type = '{}_Multiple'.format(variant_type)
+		else:
+			if not is_sufficient_data(row): variant_type = 'Insufficient'	
+			elif is_sufficient_data(row) and row[VARIANT_CALL_COL_NAME]: variant_type = 'Validated'
+			else: variant_type = 'Invalidated'
+			if is_multiple(row): variant_type = '{}_Multiple'.format(variant_type)
 		variant_types.append(variant_type)
 	variant_call_info_dataframe.insert(1, VARIANT_TYPE_COL_NAME, variant_types)
 	variant_type_counts = variant_call_info_dataframe[VARIANT_TYPE_COL_NAME].value_counts()
@@ -663,7 +708,7 @@ def create_variant_call_summary_table(variant_call_info_dataframe, command_args,
 	variant_call_info_dataframe = variant_call_info_dataframe.append(multiple_variants_dataframe)
 	with open(os.path.join(CWD, '{}_variant_summary_table.txt'.format(output_name)), 'w+') as output:
 		output.write('Command:{}\n'.format(' '.join(['python'] + command_args)))
-		output.write('Control_Estimated_Sequencing_Coverage:{}\n'.format(control_sequencing_coverage))
+		if using_control_sample: output.write('Control_Estimated_Sequencing_Coverage:{}\n'.format(control_sequencing_coverage))
 		output.write('Test_Estimated_Sequencing_Coverage:{}\n'.format(test_sequencing_coverage))
 		variant_type_counts.to_csv(output, sep=':', index=True)
 		output.write('Alpha:{}\n'.format(ALPHA))
