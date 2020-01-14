@@ -38,6 +38,44 @@ The k-mer counting command line program can be installed from their respective g
 export PATH=/programs/jellyfish-2.2.X/bin:$PATH
 ```
 
+## Script Command Line Usage
+
+usage: kmervc.py [-h] (-v VCF_INPUT | -b BED_INPUT) [-t1 TEST\_FASTQ1]
+                 [-t2 TEST_FASTQ2] [-c1 CONTROL_FASTQ1] [-c2 CONTROL_FASTQ2]
+                 [-j1 JELLYFISH_TEST] [-j2 JELLYFISH_CONTROL] -k KMER_SIZE -o
+                 OUTPUT_NAME [-fi REFERENCE_GENOME_FASTA] [-d DELIMITER] [-m]
+                 [-r] [-poi] [-a ALPHA]
+                 {compare}
+
+required positional arguments:{compare}
+
+required arguments:
+  - -k, --kmer\_size KMER\_SIZE : Size of kmer to use for analysis
+  - -o, --output\_name OUTPUT\_NAME : Output file directory name
+  - -v, --vcf VCF\_INPUT : Input vcf file
+    - OR 
+  - -b, --bed BED\_INPUT : Input ved file
+
+fastq\_group: fastq input files
+
+  - -t1, --test1 TEST\_FASTQ1 : Fastq file 1 from test sample
+  - -t2, --test2 TEST\_FASTQ2 : Fastq file 2 from test sample
+  - -c1, --control1 CONTROL\_FASTQ1 : Fastq file 1 from control sample
+  - -c2, --control2 CONTROL\_FASTQ2 : Fastq file 2 from control sample
+
+jellyfish\_group: jellyfish input files
+
+  - -j1, --jellyfish\_test JELLYFISH\_TEST : Jellyfish file of test input
+  - -j2, --jellyfish\_control JELLYFISH\_CONTROL : Jellyfish file of control input
+
+optional arguments:
+  - -h, --help            show this help message and exit
+  - -fi, --reference\_genome\_fasta REFERENCE\_GENOME\_FASTA : Reference genome fasta file to use, if different than default
+  - -m, --microsatellite  Flag : indicating if doing microsequence analysis with : respective vcf file
+  - -r, --rna             Flag : indicating if doing RNA analysis
+  - -poi, --poisson       Flag : indicating if using doing poisson distribution : for variant analysis
+  - -a, --alpha ALPHA : Alpha value used in hypothesis testing
+
 ### Examples
 
 You can test your installation of kmerVC on the otulined below. These can be carried out in the examples directory.
