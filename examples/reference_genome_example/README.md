@@ -28,5 +28,5 @@ Finally, we need to specify the desired kmer size for our analysis. In this exam
 Call the program with this command from the _examples/jellyfish\_start\_example_ directory:
 
 ```
-python ../../kmervc.py compare -k 30 -j1 ../resources/tumor.jf -j2 ../resources/normal.jf -b ../resources/variants.bed -o example_3 -fi ../resources/grch38_canonical_chrs_chrM.fa
+python ../../kmervc.py compare -k 30 -j1 ../resources/tumor.jf -j2 ../resources/normal.jf -b ../resources/genome_variants.bed -o example_3 -fi ../resources/grch38_canonical_chrs_chrM.fa
 ```
