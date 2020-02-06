@@ -470,7 +470,7 @@ def construct_variant_information_table(kmer_frequency_files, kmer_size, using_c
 			wildtype_out = [ (kmer, wildtype_in_control[kmer], wildtype_in_test[kmer]) if kmer in wildtype_in_test
 							else (kmer, wildtype_in_control[reverse_complement(kmer)], wildtype_in_test[reverse_complement(kmer)])
 							for kmer in wildtype_kmers ]
-			mutation_out = [ (kmer, mutation_in_control_count, mutation_in_test_count) if kmer in mutation_in_test
+			mutation_out = [ (kmer, mutation_in_control[kmer], mutation_in_test[kmer]) if kmer in mutation_in_test
 							else (kmer, mutation_in_control[reverse_complement(kmer)], mutation_in_test[reverse_complement(kmer)])
 							for kmer in mutation_kmers ]
 		else:
