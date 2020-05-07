@@ -559,6 +559,7 @@ def hypothesis_test(variant_info_dataframe, kmer_size, using_poisson, using_cont
 	# P(X >= k) for binomial distributed random variable X with probability prob
 	def binomial_cdf(k, n, p): return 1.0 - stats.binom.cdf(k - 1, n, p)
 
+	alpha = ALPHA / variant_info_dataframe.shape[0]
 	if using_control_sample:
 		control_variant_indices, test_variant_indices = [], []
 		control_normal_indices = []
@@ -567,8 +568,8 @@ def hypothesis_test(variant_info_dataframe, kmer_size, using_poisson, using_cont
 		for index, row in variant_info_dataframe.iterrows():
 			wildtype, mutation = row[VARIANT_COL_NAME].split('_')[3:5]
 			is_indel = wildtype == '-' or mutation == '-'
-			#power = abs(len(wildtype) - len(mutation)) + 1 if is_indel else 1
-			power = 1
+			indel_size = len(wildtype.replace('-', '')) - len(mutation.replace('-', ''))
+			power = 1 + 0.25 * (indel_size - 1) if is_indel else 1
 			sequence_error_probability = np.power(SEQUENCE_ERROR_PROBABILITY, power)
 			total_control_kmer_count = row[WILDTYPE_CONTROL_COUNT_COL_NAME] + row[MUTATION_CONTROL_COUNT_COL_NAME]
 			mutation_count_mean_estimate = total_control_kmer_count * np.power(1 - sequence_error_probability, kmer_size - 1) * (sequence_error_probability / 3)
@@ -576,7 +577,7 @@ def hypothesis_test(variant_info_dataframe, kmer_size, using_poisson, using_cont
 			if np.int(row[MUTATION_CONTROL_COUNT_COL_NAME]) > 0: # Need > 0 trials to perform binomial test
 				p_value = poisson_cdf(np.int(row[MUTATION_CONTROL_COUNT_COL_NAME]), np.int(mutation_count_mean_estimate)) if using_poisson else \
 					binomial_cdf(np.int(row[MUTATION_CONTROL_COUNT_COL_NAME]), np.int(total_control_kmer_count), sequence_error_probability)
-				if p_value < ALPHA: control_variant_indices.append(index)
+				if p_value < alpha: control_variant_indices.append(index)
 				else: control_normal_indices.append(index)
 				control_p_values[index] = p_value
 			else:
@@ -586,15 +587,15 @@ def hypothesis_test(variant_info_dataframe, kmer_size, using_poisson, using_cont
 		for index, row in variant_info_dataframe.iterrows():
 			wildtype, mutation = row[VARIANT_COL_NAME].split('_')[3:5]
 			is_indel = wildtype == '-' or mutation == '-'
-			#power = abs(len(wildtype) - len(mutation)) + 1 if is_indel else 1
-			power = 1
+			indel_size = len(wildtype.replace('-', '')) - len(mutation.replace('-', ''))
+			power = 1 + 0.25 * (indel_size - 1) if is_indel else 1
 			sequence_error_probability = np.power(SEQUENCE_ERROR_PROBABILITY, power)
 			total_test_kmer_count = row[WILDTYPE_TEST_COUNT_COL_NAME] + row[MUTATION_TEST_COUNT_COL_NAME]
 			mutation_count_mean_estimate = total_test_kmer_count * np.power(1 - sequence_error_probability, kmer_size - 1) * (sequence_error_probability / 3)
 			if np.int(row[MUTATION_TEST_COUNT_COL_NAME]) > 0: # Need > 0 trials to perform binomial test
 				p_value = poisson_cdf(np.int(row[MUTATION_TEST_COUNT_COL_NAME]), np.int(mutation_count_mean_estimate)) if using_poisson else \
 					binomial_cdf(np.int(row[MUTATION_TEST_COUNT_COL_NAME]), np.int(total_test_kmer_count), sequence_error_probability)
-				if p_value < ALPHA: test_variant_indices.append(index)
+				if p_value < alpha: test_variant_indices.append(index)
 				test_p_values[index] = p_value
 			else:
 				test_p_values[index] = '-' 
@@ -626,8 +627,8 @@ def hypothesis_test(variant_info_dataframe, kmer_size, using_poisson, using_cont
 		for index, row in variant_info_dataframe.iterrows():
 			wildtype, mutation = row[VARIANT_COL_NAME].split('_')[3:5]
 			is_indel = wildtype == '-' or mutation == '-'
-			#power = abs(len(wildtype) - len(mutation)) + 1 if is_indel else 1
-			power = 1
+			indel_size = len(wildtype.replace('-', '')) - len(mutation.replace('-', ''))
+			power = 1 + 0.25 * (indel_size - 1) if is_indel else 1
 			sequence_error_probability = np.power(SEQUENCE_ERROR_PROBABILITY, power)
 			total_test_kmer_count = row[WILDTYPE_TEST_COUNT_COL_NAME] + row[MUTATION_TEST_COUNT_COL_NAME]
 			mutation_count_mean_estimate = total_test_kmer_count * np.power(1 - sequence_error_probability, kmer_size - 1) * (sequence_error_probability / 3)
@@ -635,7 +636,7 @@ def hypothesis_test(variant_info_dataframe, kmer_size, using_poisson, using_cont
 			if np.int(row[MUTATION_TEST_COUNT_COL_NAME]) > 0: # Need > 0 trials to perform binomial test
 				p_value = poisson_cdf(np.int(row[MUTATION_CONTROL_COUNT_COL_NAME]), np.int(mutation_count_mean_estimate)) if using_poisson else \
 					binomial_cdf(np.int(row[MUTATION_TEST_COUNT_COL_NAME]), np.int(total_test_kmer_count), sequence_error_probability)
-				if p_value < ALPHA: test_variant_indices.append(index)
+				if p_value < alpha: test_variant_indices.append(index)
 				else: test_variant_indices.append(index)
 				test_p_values[index] = p_value
 			else:
