@@ -558,8 +558,8 @@ def hypothesis_test(variant_info_dataframe, kmer_size, using_poisson, using_cont
 
 	# P(X >= k) for binomial distributed random variable X with probability prob
 	def binomial_cdf(k, n, p): return 1.0 - stats.binom.cdf(k - 1, n, p)
-
-	alpha = ALPHA / variant_info_dataframe.shape[0]
+	
+	sample_count = variant_info_dataframe.shape[0]
 	if using_control_sample:
 		control_variant_indices, test_variant_indices = [], []
 		control_normal_indices = []
@@ -577,7 +577,8 @@ def hypothesis_test(variant_info_dataframe, kmer_size, using_poisson, using_cont
 			if np.int(row[MUTATION_CONTROL_COUNT_COL_NAME]) > 0: # Need > 0 trials to perform binomial test
 				p_value = poisson_cdf(np.int(row[MUTATION_CONTROL_COUNT_COL_NAME]), np.int(mutation_count_mean_estimate)) if using_poisson else \
 					binomial_cdf(np.int(row[MUTATION_CONTROL_COUNT_COL_NAME]), np.int(total_control_kmer_count), sequence_error_probability)
-				if p_value < alpha: control_variant_indices.append(index)
+				p_value *= sample_count # bonferroni correction
+				if p_value < ALPHA: control_variant_indices.append(index)
 				else: control_normal_indices.append(index)
 				control_p_values[index] = p_value
 			else:
@@ -595,7 +596,8 @@ def hypothesis_test(variant_info_dataframe, kmer_size, using_poisson, using_cont
 			if np.int(row[MUTATION_TEST_COUNT_COL_NAME]) > 0: # Need > 0 trials to perform binomial test
 				p_value = poisson_cdf(np.int(row[MUTATION_TEST_COUNT_COL_NAME]), np.int(mutation_count_mean_estimate)) if using_poisson else \
 					binomial_cdf(np.int(row[MUTATION_TEST_COUNT_COL_NAME]), np.int(total_test_kmer_count), sequence_error_probability)
-				if p_value < alpha: test_variant_indices.append(index)
+				p_value *= sample_count # bonferroni correction
+				if p_value < ALPHA: test_variant_indices.append(index)
 				test_p_values[index] = p_value
 			else:
 				test_p_values[index] = '-' 
@@ -636,7 +638,8 @@ def hypothesis_test(variant_info_dataframe, kmer_size, using_poisson, using_cont
 			if np.int(row[MUTATION_TEST_COUNT_COL_NAME]) > 0: # Need > 0 trials to perform binomial test
 				p_value = poisson_cdf(np.int(row[MUTATION_CONTROL_COUNT_COL_NAME]), np.int(mutation_count_mean_estimate)) if using_poisson else \
 					binomial_cdf(np.int(row[MUTATION_TEST_COUNT_COL_NAME]), np.int(total_test_kmer_count), sequence_error_probability)
-				if p_value < alpha: test_variant_indices.append(index)
+				p_value *= sample_count # bonferroni correction
+				if p_value < ALPHA: test_variant_indices.append(index)
 				else: test_variant_indices.append(index)
 				test_p_values[index] = p_value
 			else:
@@ -707,6 +710,15 @@ def create_variant_call_summary_table(variant_call_info_dataframe, command_args,
 	variant_call_info_dataframe = variant_call_info_dataframe.drop(multiple_variants_dataframe.index)
 	variant_call_info_dataframe = variant_call_info_dataframe.reindex(original_dataframe['Variant'])
 	variant_call_info_dataframe = variant_call_info_dataframe.append(multiple_variants_dataframe)
+	with open(os.path.join(CWD, '{}_penultimate_variant_summary_table.txt'.format(output_name)), 'w+') as output:
+		output.write('Command:{}\n'.format(' '.join(['python'] + command_args)))
+		output.write('Alpha:{}\n'.format(ALPHA))
+		penultimate_variant_call_info_dataframe = variant_call_info_dataframe.drop(
+			[VARIANT_TYPE_COL_NAME, 
+			REJECT_NULL_CONTROL_COL_NAME, 
+			REJECT_NULL_TEST_COL_NAME,
+			VARIANT_CALL_COL_NAME], axis=1)
+		penultimate_variant_call_info_dataframe.to_csv(output, sep='\t', index=True)
 	with open(os.path.join(CWD, '{}_variant_summary_table.txt'.format(output_name)), 'w+') as output:
 		output.write('Command:{}\n'.format(' '.join(['python'] + command_args)))
 		if using_control_sample: output.write('Control_Estimated_Sequencing_Coverage:{}\n'.format(control_sequencing_coverage))
