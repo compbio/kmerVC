@@ -47,9 +47,11 @@ def setup_logger():
 def get_arg_parser():
 	# Get arguments passed in by user and return args when using compare function
 	parser = ArgumentParser(description='kmerVC Command Line Argument Parser')
-	parser.add_argument('subcommand', choices=['compare'])
+	parser.add_argument('subcommand', choices=['compare', 'assess'])
 
-	vc_group = parser.add_mutually_exclusive_group(required=True)
+	is_compare = sys.argv[1] == 'compare'
+
+	vc_group = parser.add_mutually_exclusive_group(required=is_compare)
 	vc_group.add_argument('-v', '--vcf', dest='vcf_input', help='Input vcf file')
 	vc_group.add_argument('-b', '--bed', dest='bed_input', help='Input ved file')
 
@@ -63,15 +65,17 @@ def get_arg_parser():
 	jellyfish_group.add_argument('-j1', '--jellyfish_test', dest='jellyfish_test', help='Jellyfish file of test input')
 	jellyfish_group.add_argument('-j2', '--jellyfish_control', dest='jellyfish_control', help='Jellyfish file of control input')
 
-	parser.add_argument('-k', '--kmer_size', dest='kmer_size', required=True, type=int, help='Size of kmer to use for analysis')
-	parser.add_argument('-o', '--output_name', dest='output_name', required=True, help='Output file directory name')
+	parser.add_argument('-k', '--kmer_size', dest='kmer_size', required=is_compare, type=int, help='Size of kmer to use for analysis')
+	parser.add_argument('-o', '--output_name', dest='output_name', required=is_compare, help='Output file directory name')
 
 	parser.add_argument('-fi', '--reference_genome_fasta', dest='reference_genome_fasta', help='Reference genome fasta file to use, if different than default')
 	parser.add_argument('-d', '--delimiter', dest='delimiter', help='Delimiter to use in final analysis table. Pick from TAB, COMMA, SPACE')
 	parser.add_argument('-m', '--microsatellite', action='store_true', help='Flag indicating if doing microsequence analysis with respective vcf file')
 	parser.add_argument('-r', '--rna', action='store_true', help='Flag indicating if doing RNA analysis')
 	parser.add_argument('-poi', '--poisson', action='store_true', help='Flag indicating if using doing poisson distribution for variant analysis')
-	parser.add_argument('-a', '--alpha', dest='alpha', default=0.01, type=float, help='Alpha value used in hypothesis testing')
+	parser.add_argument('-a', '--alpha', dest='alpha', default=0.01, type=float, required=not is_compare, help='Alpha value used in hypothesis testing')
+
+	parser.add_argument('-p', '-penultimate', dest='penultimate', help='Penultimate final table to make assessments on.', required=not is_compare)
 	return parser
 
 
@@ -711,8 +715,6 @@ def create_variant_call_summary_table(variant_call_info_dataframe, command_args,
 	variant_call_info_dataframe = variant_call_info_dataframe.reindex(original_dataframe['Variant'])
 	variant_call_info_dataframe = variant_call_info_dataframe.append(multiple_variants_dataframe)
 	with open(os.path.join(CWD, '{}_penultimate_variant_summary_table.txt'.format(output_name)), 'w+') as output:
-		output.write('Command:{}\n'.format(' '.join(['python'] + command_args)))
-		output.write('Alpha:{}\n'.format(ALPHA))
 		penultimate_variant_call_info_dataframe = variant_call_info_dataframe.drop(
 			[VARIANT_TYPE_COL_NAME, 
 			REJECT_NULL_CONTROL_COL_NAME, 
@@ -725,7 +727,56 @@ def create_variant_call_summary_table(variant_call_info_dataframe, command_args,
 		output.write('Test_Estimated_Sequencing_Coverage:{}\n'.format(test_sequencing_coverage))
 		variant_type_counts.to_csv(output, sep=':', index=True)
 		output.write('Alpha:{}\n'.format(ALPHA))
+		output.write('Bonferroni correction by n={}\n'.format(variant_call_info_dataframe.shape[0]))
 		variant_call_info_dataframe.to_csv(output, sep='\t', index=True)
+
+def validate_mutations(penultimate_dataframe, alpha, output_name, command_args):
+	# Given df, get Reject null control/test and give validations
+	# TODO - account for single sample case	
+	reject_null_control_variants, reject_null_test_variants, variant_calls= [], [], []
+	control_p_value_list, test_p_value_list = [], []
+	for index, row in penultimate_dataframe.iterrows():
+		reject_null_control_value = False
+		reject_null_test_value = False
+		control_p_val, test_p_val = row[[CONTROL_P_VALUE_COL_NAME, TEST_P_VALUE_COL_NAME]]
+		if control_p_val != '-' and float(control_p_val) < alpha:
+			reject_null_control_value = True
+		if test_p_val != '-' and float(test_p_val) < alpha:
+			reject_null_test_value = True
+		variant_call_value = not reject_null_control_value and reject_null_test_value # Need reject_null_control = False and reject_null_test = True 
+		variant_call_value = True if variant_call_value else False
+		reject_null_control_variants.append(reject_null_control_value)
+		reject_null_test_variants.append(reject_null_test_value)
+		variant_calls.append(variant_call_value)
+  	penultimate_dataframe.insert(1, VARIANT_CALL_COL_NAME, variant_calls)
+	penultimate_dataframe.insert(2, REJECT_NULL_CONTROL_COL_NAME, reject_null_control_variants)
+	penultimate_dataframe.insert(4, REJECT_NULL_TEST_COL_NAME, reject_null_test_variants)
+
+	def is_sufficient_data(row): return row[WILDTYPE_UNIQUE_COUNT_COL_NAME] >= SUFFICIENT_DATA_MINIMUM_KMERS and row[MUTATION_ZERO_COUNT_COL_NAME] >= SUFFICIENT_DATA_MINIMUM_KMERS
+	def is_snp_affected(row): return is_sufficient_data(row)  and row[WILDTYPE_CONTROL_COUNT_COL_NAME] < 2 # TODO- CHANGE hardcodoing to validated_call_minimum_required_count
+	def is_validated(row): return is_sufficient_data(row) and not is_snp_affected(row) and row[VARIANT_CALL_COL_NAME]
+	def is_germline(row): return row[REJECT_NULL_CONTROL_COL_NAME]
+	def is_multiple(row): return len(row[VARIANT_COL_NAME].split(',')) > 1
+	variant_types = []
+	for index, row in penultimate_dataframe.iterrows():
+		if is_snp_affected(row): variant_type = 'SNP'
+		elif not is_sufficient_data(row): variant_type = 'Insufficient'
+		elif is_validated(row): variant_type = 'Validated'
+		elif is_germline(row): variant_type = 'Germline'
+		else: variant_type = 'Invalidated'
+		if is_multiple(row): variant_type = '{}_Multiple'.format(variant_type)
+		variant_types.append(variant_type)
+
+	penultimate_dataframe.insert(1, VARIANT_TYPE_COL_NAME, variant_types)
+	variant_type_counts = penultimate_dataframe[VARIANT_TYPE_COL_NAME].value_counts()
+
+	with open(os.path.join(CWD, '{}_variant_summary_table.txt'.format(output_name)), 'w+') as output:
+		output.write('Command:{}\n'.format(' '.join(['python'] + command_args)))
+		variant_type_counts.to_csv(output, sep=':', index=True)
+		output.write('Alpha:{}\n'.format(alpha))
+		output.write('Bonferroni correction by n={}\n'.format(penultimate_dataframe.shape[0]))
+		penultimate_dataframe.to_csv(output, sep='\t', index=False)
+
 
 #############################################################
 #	 					Set Up util File					#

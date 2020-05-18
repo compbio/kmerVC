@@ -4,8 +4,12 @@ from util import *
 def run_kmervc():
 	parser = get_arg_parser()
 	args = parser.parse_args()
-	logging.info('Performing compare subcommand. Calling perform_compare')
-	perform_compare(args)
+	if args.subcommand == 'compare':
+		logging.info('Performing compare subcommand. Calling perform_compare')
+		perform_compare(args)
+	elif args.subcommand == 'assess':
+		logging.info('Performing assess subcommand. Calling perform_assess')
+		perform_assess(args)
 
 def perform_compare(args):
 	jellyfish_test, jellyfish_control = args.jellyfish_test, args.jellyfish_control
@@ -22,6 +26,10 @@ def perform_compare(args):
 	variant_info_dataframe = construct_variant_information_table(kmer_frequency_files, args.kmer_size, jellyfish_control, wildtype_sequence_file, mutation_sequence_file)
 	variant_call_info_dataframe = hypothesis_test(variant_info_dataframe, args.kmer_size, args.poisson, jellyfish_control, args.output_name)
 	create_variant_call_summary_table(variant_call_info_dataframe, sys.argv, kmer_frequency_files, args.output_name, original_dataframe, jellyfish_control)
+
+def perform_assess(args):
+	penultimate_dataframe = pd.read_csv(args.penultimate, sep='\t')
+	validate_mutations(penultimate_dataframe, args.alpha, args.penultimate.split('_')[0], sys.argv)
 
 def construct_variants_dataframe(args):
 	# Construct a dataframe of the input vcf/bed file, retaining columns of the chromosome name,
