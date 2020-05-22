@@ -564,6 +564,7 @@ def hypothesis_test(variant_info_dataframe, kmer_size, using_poisson, using_cont
 	def binomial_cdf(k, n, p): return 1.0 - stats.binom.cdf(k - 1, n, p)
 	
 	sample_count = variant_info_dataframe.shape[0]
+	alpha = ALPHA / sample_count # bonferroni correction
 	if using_control_sample:
 		control_variant_indices, test_variant_indices = [], []
 		control_normal_indices = []
@@ -581,8 +582,7 @@ def hypothesis_test(variant_info_dataframe, kmer_size, using_poisson, using_cont
 			if np.int(row[MUTATION_CONTROL_COUNT_COL_NAME]) > 0: # Need > 0 trials to perform binomial test
 				p_value = poisson_cdf(np.int(row[MUTATION_CONTROL_COUNT_COL_NAME]), np.int(mutation_count_mean_estimate)) if using_poisson else \
 					binomial_cdf(np.int(row[MUTATION_CONTROL_COUNT_COL_NAME]), np.int(total_control_kmer_count), sequence_error_probability)
-				p_value *= sample_count # bonferroni correction
-				if p_value < ALPHA: control_variant_indices.append(index)
+				if p_value < alpha: control_variant_indices.append(index)
 				else: control_normal_indices.append(index)
 				control_p_values[index] = p_value
 			else:
@@ -600,8 +600,7 @@ def hypothesis_test(variant_info_dataframe, kmer_size, using_poisson, using_cont
 			if np.int(row[MUTATION_TEST_COUNT_COL_NAME]) > 0: # Need > 0 trials to perform binomial test
 				p_value = poisson_cdf(np.int(row[MUTATION_TEST_COUNT_COL_NAME]), np.int(mutation_count_mean_estimate)) if using_poisson else \
 					binomial_cdf(np.int(row[MUTATION_TEST_COUNT_COL_NAME]), np.int(total_test_kmer_count), sequence_error_probability)
-				p_value *= sample_count # bonferroni correction
-				if p_value < ALPHA: test_variant_indices.append(index)
+				if p_value < alpha: test_variant_indices.append(index)
 				test_p_values[index] = p_value
 			else:
 				test_p_values[index] = '-' 
@@ -642,8 +641,7 @@ def hypothesis_test(variant_info_dataframe, kmer_size, using_poisson, using_cont
 			if np.int(row[MUTATION_TEST_COUNT_COL_NAME]) > 0: # Need > 0 trials to perform binomial test
 				p_value = poisson_cdf(np.int(row[MUTATION_CONTROL_COUNT_COL_NAME]), np.int(mutation_count_mean_estimate)) if using_poisson else \
 					binomial_cdf(np.int(row[MUTATION_TEST_COUNT_COL_NAME]), np.int(total_test_kmer_count), sequence_error_probability)
-				p_value *= sample_count # bonferroni correction
-				if p_value < ALPHA: test_variant_indices.append(index)
+				if p_value < alpha: test_variant_indices.append(index)
 				else: test_variant_indices.append(index)
 				test_p_values[index] = p_value
 			else:
@@ -714,6 +712,7 @@ def create_variant_call_summary_table(variant_call_info_dataframe, command_args,
 	variant_call_info_dataframe = variant_call_info_dataframe.drop(multiple_variants_dataframe.index)
 	variant_call_info_dataframe = variant_call_info_dataframe.reindex(original_dataframe['Variant'])
 	variant_call_info_dataframe = variant_call_info_dataframe.append(multiple_variants_dataframe)
+	sample_count = variant_call_info_dataframe.shape[0]
 	with open(os.path.join(CWD, '{}_penultimate_variant_summary_table.txt'.format(output_name)), 'w+') as output:
 		penultimate_variant_call_info_dataframe = variant_call_info_dataframe.drop(
 			[VARIANT_TYPE_COL_NAME, 
@@ -727,7 +726,7 @@ def create_variant_call_summary_table(variant_call_info_dataframe, command_args,
 		output.write('Test_Estimated_Sequencing_Coverage:{}\n'.format(test_sequencing_coverage))
 		variant_type_counts.to_csv(output, sep=':', index=True)
 		output.write('Alpha:{}\n'.format(ALPHA))
-		output.write('Bonferroni correction by n={}\n'.format(variant_call_info_dataframe.shape[0]))
+		output.write('Adjusted alpha value with bonferroni correction by n={}\n'.format(sample_count))
 		variant_call_info_dataframe.to_csv(output, sep='\t', index=True)
 
 def validate_mutations(penultimate_dataframe, alpha, output_name, command_args):
@@ -769,12 +768,12 @@ def validate_mutations(penultimate_dataframe, alpha, output_name, command_args):
 
 	penultimate_dataframe.insert(1, VARIANT_TYPE_COL_NAME, variant_types)
 	variant_type_counts = penultimate_dataframe[VARIANT_TYPE_COL_NAME].value_counts()
-
+	sample_count = penultimate_dataframe.shape[0]
 	with open(os.path.join(CWD, '{}_variant_summary_table.txt'.format(output_name)), 'w+') as output:
 		output.write('Command:{}\n'.format(' '.join(['python'] + command_args)))
 		variant_type_counts.to_csv(output, sep=':', index=True)
-		output.write('Alpha:{}\n'.format(alpha))
-		output.write('Bonferroni correction by n={}\n'.format(penultimate_dataframe.shape[0]))
+		output.write('Alpha:{}\n'.format(ALPHA))
+		output.write('Adjusted alpha value with bonferroni correction by n={}\n'.format(sample_count))
 		penultimate_dataframe.to_csv(output, sep='\t', index=False)
 
 
