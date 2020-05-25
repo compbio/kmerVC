@@ -561,17 +561,16 @@ def hypothesis_test(variant_info_dataframe, kmer_size, using_poisson, using_cont
 	def poisson_cdf(k, mu): return 1.0 - sum(poisson_pmf(k_, mu) for k_ in xrange(0, k))
 
 	# P(X >= k) for binomial distributed random variable X with probability prob
-	def binomial_cdf(k, n, p): return 1.0 - stats.binom.cdf(k - 1, n, p)
+	#def binomial_cdf(k, n, p): return 1.0 - stats.binom.cdf(k - 1, n, p)
 
-	#def binomialpmf(k, n, p):
-	#	# Binomial distribution pmf with mean n*p on set {0,1,...,n} at k in {0,1,...,n}
-	#	p = np.exp(k*np.log(p) + (n-k)*np.log(1-p) + special.gammaln(n+1) - special.gammaln(k+1) - special.gammaln(n-k+1))
-	#	return p
+	def binomialpmf(k, n, p):
+		# Binomial distribution pmf with mean n*p on set {0,1,...,n} at k in {0,1,...,n}
+		p = np.exp(k*np.log(p) + (n-k)*np.log(1-p) + special.gammaln(n+1) - special.gammaln(k+1) - special.gammaln(n-k+1))
+		return p
 
-	#def binomial_cdf(k, n, p):
+	def binomial_cdf(k, n, p):
 	# P(X >= k) for X Binomial-distributed with mean n*p on set {0,1,...,n}
-	#return sum(binomialpmf(k_, n, p) for k_ in range(k, n+1))
-	#	return 1 - sum(binomialpmf(k_, n, p) for k_ in range(k))
+		return 1 - sum(binomialpmf(k_, n, p) for k_ in range(k))
 	
 	sample_count = variant_info_dataframe.shape[0]
 	alpha = ALPHA / sample_count # bonferroni correction
