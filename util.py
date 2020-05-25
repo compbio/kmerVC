@@ -562,6 +562,16 @@ def hypothesis_test(variant_info_dataframe, kmer_size, using_poisson, using_cont
 
 	# P(X >= k) for binomial distributed random variable X with probability prob
 	def binomial_cdf(k, n, p): return 1.0 - stats.binom.cdf(k - 1, n, p)
+
+	#def binomialpmf(k, n, p):
+	#	# Binomial distribution pmf with mean n*p on set {0,1,...,n} at k in {0,1,...,n}
+	#	p = np.exp(k*np.log(p) + (n-k)*np.log(1-p) + special.gammaln(n+1) - special.gammaln(k+1) - special.gammaln(n-k+1))
+	#	return p
+
+	#def binomial_cdf(k, n, p):
+	# P(X >= k) for X Binomial-distributed with mean n*p on set {0,1,...,n}
+	#return sum(binomialpmf(k_, n, p) for k_ in range(k, n+1))
+	#	return 1 - sum(binomialpmf(k_, n, p) for k_ in range(k))
 	
 	sample_count = variant_info_dataframe.shape[0]
 	alpha = ALPHA / sample_count # bonferroni correction
@@ -574,7 +584,7 @@ def hypothesis_test(variant_info_dataframe, kmer_size, using_poisson, using_cont
 			wildtype, mutation = row[VARIANT_COL_NAME].split('_')[3:5]
 			is_indel = wildtype == '-' or mutation == '-'
 			indel_size = len(wildtype.replace('-', '')) - len(mutation.replace('-', ''))
-			power = 1 + 0.25 * (indel_size - 1) if is_indel else 1
+			power = 1 # + 0.25 * (indel_size - 1) if is_indel else 1
 			sequence_error_probability = np.power(SEQUENCE_ERROR_PROBABILITY, power)
 			total_control_kmer_count = row[WILDTYPE_CONTROL_COUNT_COL_NAME] + row[MUTATION_CONTROL_COUNT_COL_NAME]
 			mutation_count_mean_estimate = total_control_kmer_count * np.power(1 - sequence_error_probability, kmer_size - 1) * (sequence_error_probability / 3)
@@ -593,7 +603,7 @@ def hypothesis_test(variant_info_dataframe, kmer_size, using_poisson, using_cont
 			wildtype, mutation = row[VARIANT_COL_NAME].split('_')[3:5]
 			is_indel = wildtype == '-' or mutation == '-'
 			indel_size = len(wildtype.replace('-', '')) - len(mutation.replace('-', ''))
-			power = 1 + 0.25 * (indel_size - 1) if is_indel else 1
+			power = 1 # + 0.25 * (indel_size - 1) if is_indel else 1
 			sequence_error_probability = np.power(SEQUENCE_ERROR_PROBABILITY, power)
 			total_test_kmer_count = row[WILDTYPE_TEST_COUNT_COL_NAME] + row[MUTATION_TEST_COUNT_COL_NAME]
 			mutation_count_mean_estimate = total_test_kmer_count * np.power(1 - sequence_error_probability, kmer_size - 1) * (sequence_error_probability / 3)
@@ -633,7 +643,7 @@ def hypothesis_test(variant_info_dataframe, kmer_size, using_poisson, using_cont
 			wildtype, mutation = row[VARIANT_COL_NAME].split('_')[3:5]
 			is_indel = wildtype == '-' or mutation == '-'
 			indel_size = len(wildtype.replace('-', '')) - len(mutation.replace('-', ''))
-			power = 1 + 0.25 * (indel_size - 1) if is_indel else 1
+			power = 1 # + 0.25 * (indel_size - 1) if is_indel else 1
 			sequence_error_probability = np.power(SEQUENCE_ERROR_PROBABILITY, power)
 			total_test_kmer_count = row[WILDTYPE_TEST_COUNT_COL_NAME] + row[MUTATION_TEST_COUNT_COL_NAME]
 			mutation_count_mean_estimate = total_test_kmer_count * np.power(1 - sequence_error_probability, kmer_size - 1) * (sequence_error_probability / 3)
