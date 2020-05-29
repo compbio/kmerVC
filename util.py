@@ -151,7 +151,7 @@ def setup_output_directory(output_folder_name, reference_genome_fasta_file, kmer
 	output_path = os.path.join(CWD, output_folder_name)
 	os.mkdir(output_path)
 	ALPHA = alpha
-	if reference_genome_fasta_file: 
+	if reference_genome_fasta_file:
 		GENOME_FASTA = reference_genome_fasta_file	# update genome fasta given user provided input
 		filename, file_extension = os.path.splitext(GENOME_FASTA)
 		basename = os.path.basename(filename)
@@ -160,7 +160,7 @@ def setup_output_directory(output_folder_name, reference_genome_fasta_file, kmer
 			logging.info('Genome jellyfish does not exist.')
 			print('error:\tGenome jellyfish does not exist. Please create and place in the same directory as your input reference genome file. Call this command in the same directory as your reference genome file to create:\n\tjellyfish count -m {} -s 100M -t 24 -C -o {} {}'.format(kmer_size, '{}_{}mer.jf'.format(basename, kmer_size), '{}.fa'.format(basename)))
 			exit_program()
-		else: 
+		else:
 			GENOME_JELLYFISH = expected_genome_jellyfish
 	else:
 		GENOME_JELLYFISH = os.path.join(REFERENCES_FOLDER, 'grch38_canonical_chrs_chrM_{}mer.jf'.format(kmer_size))
@@ -217,7 +217,7 @@ def make_variant_bed_file(variants_dataframe, args):
 	deletions['end'] -= 1
 	variants_dataframe.update(deletions)
 
-	# handle difference in extraction range for insertions	
+	# handle difference in extraction range for insertions
 	insertions = variants_dataframe.loc[variants_dataframe['wildtype'] == '-', :].copy()
 	insertions['start'] -= 1
 	insertions['end'] -= 1
@@ -485,7 +485,7 @@ def construct_variant_information_table(kmer_frequency_files, kmer_size, using_c
 							else (kmer, None, mutation_in_test[reverse_complement(kmer)])
 							for kmer in mutation_kmers ]
 		kmer_counts_per_variant[variant] = (wildtype_out, mutation_out)
-	
+
 	wildtype_sequences_file, mutation_sequences_file = open(wildtype_path, 'r'), open(mutation_path, 'r')
 	wildtype_sequences = { entry.rstrip().split('\n')[0]: entry.rstrip().split('\n')[1] for entry in wildtype_sequences_file.read().split('>')[1:] }
 	mutation_sequences = { entry.rstrip().split('\n')[0]: entry.rstrip().split('\n')[1] for entry in mutation_sequences_file.read().split('>')[1:] }
@@ -530,8 +530,8 @@ def construct_variant_information_table(kmer_frequency_files, kmer_size, using_c
 				MUTATION_ZERO_COUNT_COL_NAME: len(mutation_zero),
 		}
 		if using_control_sample:
-			new_entry[WILDTYPE_CONTROL_COUNT_COL_NAME] = wildtype_control_median	
-			new_entry[MUTATION_CONTROL_COUNT_COL_NAME] = mutation_control_median	
+			new_entry[WILDTYPE_CONTROL_COUNT_COL_NAME] = wildtype_control_median
+			new_entry[MUTATION_CONTROL_COUNT_COL_NAME] = mutation_control_median
 		all_entries.append(new_entry)
 
 	all_columns = [
@@ -571,7 +571,7 @@ def hypothesis_test(variant_info_dataframe, kmer_size, using_poisson, using_cont
 	def binomial_cdf(k, n, p):
 	# P(X >= k) for X Binomial-distributed with mean n*p on set {0,1,...,n}
 		return 1 - sum(binomialpmf(k_, n, p) for k_ in range(k))
-	
+
 	sample_count = variant_info_dataframe.shape[0]
 	alpha = ALPHA / sample_count # bonferroni correction
 	if using_control_sample:
@@ -587,16 +587,16 @@ def hypothesis_test(variant_info_dataframe, kmer_size, using_poisson, using_cont
 			sequence_error_probability = np.power(SEQUENCE_ERROR_PROBABILITY, power)
 			total_control_kmer_count = row[WILDTYPE_CONTROL_COUNT_COL_NAME] + row[MUTATION_CONTROL_COUNT_COL_NAME]
 			mutation_count_mean_estimate = total_control_kmer_count * np.power(1 - sequence_error_probability, kmer_size - 1) * (sequence_error_probability / 3)
-	
+
 			if np.int(row[MUTATION_CONTROL_COUNT_COL_NAME]) > 0: # Need > 0 trials to perform binomial test
 				p_value = poisson_cdf(np.int(row[MUTATION_CONTROL_COUNT_COL_NAME]), np.int(mutation_count_mean_estimate)) if using_poisson else \
-					binomial_cdf(np.int(row[MUTATION_CONTROL_COUNT_COL_NAME]), np.int(total_control_kmer_count), sequence_error_probability)
+					binomial_cdf(np.int16(row[MUTATION_CONTROL_COUNT_COL_NAME]), np.int16(total_control_kmer_count), sequence_error_probability)
 				if p_value < alpha: control_variant_indices.append(index)
 				else: control_normal_indices.append(index)
 				control_p_values[index] = p_value
 			else:
-				control_p_values[index] = '-' 
-	
+				control_p_values[index] = '-'
+
 		# Among the entries for which we accept the first hypothesis, we select the entries for which we reject the hypothesis M_T = 0
 		for index, row in variant_info_dataframe.iterrows():
 			wildtype, mutation = row[VARIANT_COL_NAME].split('_')[3:5]
@@ -608,25 +608,25 @@ def hypothesis_test(variant_info_dataframe, kmer_size, using_poisson, using_cont
 			mutation_count_mean_estimate = total_test_kmer_count * np.power(1 - sequence_error_probability, kmer_size - 1) * (sequence_error_probability / 3)
 			if np.int(row[MUTATION_TEST_COUNT_COL_NAME]) > 0: # Need > 0 trials to perform binomial test
 				p_value = poisson_cdf(np.int(row[MUTATION_TEST_COUNT_COL_NAME]), np.int(mutation_count_mean_estimate)) if using_poisson else \
-					binomial_cdf(np.int(row[MUTATION_TEST_COUNT_COL_NAME]), np.int(total_test_kmer_count), sequence_error_probability)
+					binomial_cdf(np.int16(row[MUTATION_TEST_COUNT_COL_NAME]), np.int16(total_test_kmer_count), sequence_error_probability)
 				if p_value < alpha: test_variant_indices.append(index)
 				test_p_values[index] = p_value
 			else:
-				test_p_values[index] = '-' 
-	
+				test_p_values[index] = '-'
+
 		reject_null_control_variants, reject_null_test_variants, variant_calls= [], [], []
 		control_p_value_list, test_p_value_list = [], []
 		for index in range(variant_info_dataframe.shape[0]):
 			reject_null_control_value = True if index in control_variant_indices else False
 			reject_null_test_value = True if index in test_variant_indices else False
-			variant_call_value = not reject_null_control_value and reject_null_test_value # Need reject_null_control = False and reject_null_test = True 
+			variant_call_value = not reject_null_control_value and reject_null_test_value # Need reject_null_control = False and reject_null_test = True
 			variant_call_value = True if variant_call_value else False
 			reject_null_control_variants.append(reject_null_control_value)
 			reject_null_test_variants.append(reject_null_test_value)
 			variant_calls.append(variant_call_value)
 			control_p_value_list.append(control_p_values[index])
 			test_p_value_list.append(test_p_values[index])
-		
+
 		variant_info_dataframe.insert(1, VARIANT_CALL_COL_NAME, variant_calls)
 		variant_info_dataframe.insert(2, REJECT_NULL_CONTROL_COL_NAME, reject_null_control_variants)
 		variant_info_dataframe.insert(3, CONTROL_P_VALUE_COL_NAME, control_p_value_list)
@@ -646,7 +646,7 @@ def hypothesis_test(variant_info_dataframe, kmer_size, using_poisson, using_cont
 			sequence_error_probability = np.power(SEQUENCE_ERROR_PROBABILITY, power)
 			total_test_kmer_count = row[WILDTYPE_TEST_COUNT_COL_NAME] + row[MUTATION_TEST_COUNT_COL_NAME]
 			mutation_count_mean_estimate = total_test_kmer_count * np.power(1 - sequence_error_probability, kmer_size - 1) * (sequence_error_probability / 3)
-			
+
 			if np.int(row[MUTATION_TEST_COUNT_COL_NAME]) > 0: # Need > 0 trials to perform binomial test
 				p_value = poisson_cdf(np.int(row[MUTATION_CONTROL_COUNT_COL_NAME]), np.int(mutation_count_mean_estimate)) if using_poisson else \
 					binomial_cdf(np.int(row[MUTATION_TEST_COUNT_COL_NAME]), np.int(total_test_kmer_count), sequence_error_probability)
@@ -654,7 +654,7 @@ def hypothesis_test(variant_info_dataframe, kmer_size, using_poisson, using_cont
 				else: test_variant_indices.append(index)
 				test_p_values[index] = p_value
 			else:
-				test_p_values[index] = '-' 
+				test_p_values[index] = '-'
 
 
 		reject_null_test_variants, variant_calls = [], []
@@ -665,7 +665,7 @@ def hypothesis_test(variant_info_dataframe, kmer_size, using_poisson, using_cont
 			reject_null_test_variants.append(reject_null_test_value)
 			variant_calls.append(variant_call_value)
 			test_p_value_list.append(test_p_values[index])
-		
+
 		variant_info_dataframe.insert(1, VARIANT_CALL_COL_NAME, variant_calls)
 		variant_info_dataframe.insert(2, REJECT_NULL_TEST_COL_NAME, reject_null_test_variants)
 		variant_info_dataframe.insert(3, TEST_P_VALUE_COL_NAME, test_p_value_list)
@@ -673,7 +673,7 @@ def hypothesis_test(variant_info_dataframe, kmer_size, using_poisson, using_cont
 		variant_info_dataframe.to_csv(os.path.join(output_path, 'variant_info_summary.txt'), sep='\t', index=False)
 
 	return variant_info_dataframe
-	
+
 def create_variant_call_summary_table(variant_call_info_dataframe, command_args, kmer_frequency_files, output_name, original_dataframe, using_control_sample):
 	def estimate_sequencing_coverage():	# TODO: Use only unique kmers
 		test_wildtype_file, test_mutation_file, control_wildtype_file, control_mutation_file, genome_wildtype_file, genome_mutation_file = kmer_frequency_files
@@ -706,7 +706,7 @@ def create_variant_call_summary_table(variant_call_info_dataframe, command_args,
 			else: variant_type = 'Invalidated'
 			if is_multiple(row): variant_type = '{}_Multiple'.format(variant_type)
 		else:
-			if not is_sufficient_data(row): variant_type = 'Insufficient'	
+			if not is_sufficient_data(row): variant_type = 'Insufficient'
 			elif is_sufficient_data(row) and row[VARIANT_CALL_COL_NAME]: variant_type = 'Validated'
 			else: variant_type = 'Invalidated'
 			if is_multiple(row): variant_type = '{}_Multiple'.format(variant_type)
@@ -724,8 +724,8 @@ def create_variant_call_summary_table(variant_call_info_dataframe, command_args,
 	sample_count = variant_call_info_dataframe.shape[0]
 	with open(os.path.join(CWD, '{}_penultimate_variant_summary_table.txt'.format(output_name)), 'w+') as output:
 		penultimate_variant_call_info_dataframe = variant_call_info_dataframe.drop(
-			[VARIANT_TYPE_COL_NAME, 
-			REJECT_NULL_CONTROL_COL_NAME, 
+			[VARIANT_TYPE_COL_NAME,
+			REJECT_NULL_CONTROL_COL_NAME,
 			REJECT_NULL_TEST_COL_NAME,
 			VARIANT_CALL_COL_NAME], axis=1)
 		penultimate_variant_call_info_dataframe.to_csv(output, sep='\t', index=True)
@@ -740,7 +740,7 @@ def create_variant_call_summary_table(variant_call_info_dataframe, command_args,
 
 def validate_mutations(penultimate_dataframe, alpha, output_name, command_args):
 	# Given df, get Reject null control/test and give validations
-	# TODO - account for single sample case	
+	# TODO - account for single sample case
 	reject_null_control_variants, reject_null_test_variants, variant_calls= [], [], []
 	control_p_value_list, test_p_value_list = [], []
 	for index, row in penultimate_dataframe.iterrows():
@@ -751,7 +751,7 @@ def validate_mutations(penultimate_dataframe, alpha, output_name, command_args):
 			reject_null_control_value = True
 		if test_p_val != '-' and float(test_p_val) < alpha:
 			reject_null_test_value = True
-		variant_call_value = not reject_null_control_value and reject_null_test_value # Need reject_null_control = False and reject_null_test = True 
+		variant_call_value = not reject_null_control_value and reject_null_test_value # Need reject_null_control = False and reject_null_test = True
 		variant_call_value = True if variant_call_value else False
 		reject_null_control_variants.append(reject_null_control_value)
 		reject_null_test_variants.append(reject_null_test_value)
