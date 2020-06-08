@@ -756,7 +756,7 @@ def validate_mutations(penultimate_dataframe, alpha, output_name, command_args):
 		reject_null_control_variants.append(reject_null_control_value)
 		reject_null_test_variants.append(reject_null_test_value)
 		variant_calls.append(variant_call_value)
-  	penultimate_dataframe.insert(1, VARIANT_CALL_COL_NAME, variant_calls)
+	penultimate_dataframe.insert(1, VARIANT_CALL_COL_NAME, variant_calls)
 	penultimate_dataframe.insert(2, REJECT_NULL_CONTROL_COL_NAME, reject_null_control_variants)
 	penultimate_dataframe.insert(4, REJECT_NULL_TEST_COL_NAME, reject_null_test_variants)
 
