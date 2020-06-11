@@ -2,9 +2,9 @@
 This repo contains the kmerVC software scripts that function to evaluate the somatic mutation validity of a set of variants as input. The code here was used to produce the results in the paper "Feasibility of k-mers counts for somatic mutation calls", which is currently in submission. The lab software page for kmerVC can be accessed [here.](https://dna-discovery.stanford.edu/research/software/kmervc/)
 
 ## Installation and testing run
-git clone https://github.com/compbio/kmerVC.git
-Navigate into TEST directory and download test.zip from https://dna-discovery.stanford.edu/publicmaterial/software/kmervc/
-Type the following command that starts with jellyfish outcomes:
+- git clone https://github.com/compbio/kmerVC.git
+- Navigate into TEST directory and download test.zip from https://dna-discovery.stanford.edu/publicmaterial/software/kmervc/
+- Type the following command that starts with jellyfish outcomes:
 ```
 python ../kmervc.py compare -k 30 -j1 tumor_30mer.jf -j2 normal_30mer.jf -b variants.bed -o test -fi chrT.fa
 ```
