@@ -4,6 +4,7 @@ This repo contains the kmerVC software scripts that function to evaluate the som
 ## Installation and testing run
 - git clone https://github.com/compbio/kmerVC.git
 - Navigate into TEST directory and download test.zip from https://dna-discovery.stanford.edu/publicmaterial/software/kmervc/
+- Install Jellyfish from https://github.com/gmarcais/Jellyfish
 - Type the following command that starts with jellyfish outcomes:
 ```
 python ../kmervc.py compare -k 30 -j1 tumor_30mer.jf -j2 normal_30mer.jf -b variants.bed -o test -fi chrT.fa
