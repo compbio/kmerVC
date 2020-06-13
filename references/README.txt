@@ -1,2 +1,1 @@
 - download reference.zip from https://dna-discovery.stanford.edu/publicmaterial/software/kmervc/
-- unzip it
