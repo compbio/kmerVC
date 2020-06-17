@@ -1,5 +1,5 @@
 #!/usr/bin/python2.7
-from util import *
+from kmervclib import *
 
 def run_kmervc():
 	parser = get_arg_parser()
@@ -47,4 +47,3 @@ def construct_variants_dataframe(args):
 if __name__ == '__main__':
 	setup_logger()
 	run_kmervc()
-

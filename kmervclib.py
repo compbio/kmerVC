@@ -28,7 +28,7 @@ CONTROL_P_VALUE_COL_NAME = 'Control_P_Val'
 TEST_P_VALUE_COL_NAME = 'Test_P_Val'
 VARIANT_CALL_COL_NAME = 'Variant_Call'
 WILDTYPE_UNIQUE_COUNT_COL_NAME = 'Wildtype_Unique_Count'
-MUTATION_ZERO_COUNT_COL_NAME = 'Mutation_Zero_Count'
+MUTATION_ZERO_COUNT_COL_NAME = 'Mutation_Unique_Count'
 SUFFICIENT_DATA_MINIMUM_KMERS = 5	# minimum count of unique kmers required for to analyze variant call
 SEQUENCE_ERROR_PROBABILITY = 0.01
 ALPHA = 0.01
@@ -731,9 +731,10 @@ def create_variant_call_summary_table(variant_call_info_dataframe, command_args,
 		penultimate_variant_call_info_dataframe.to_csv(output, sep='\t', index=True)
 	with open(os.path.join(CWD, '{}_variant_summary_table.txt'.format(output_name)), 'w+') as output:
 		output.write('Command:{}\n'.format(' '.join(['python'] + command_args)))
-		if using_control_sample: output.write('Control_Estimated_Sequencing_Coverage:{}\n'.format(control_sequencing_coverage))
-		output.write('Test_Estimated_Sequencing_Coverage:{}\n'.format(test_sequencing_coverage))
-		variant_type_counts.to_csv(output, sep=':', index=True)
+		if using_control_sample: variant_type_counts.to_csv(output, sep=':', index=True)
+			#output.write('Control_Estimated_Sequencing_Coverage:{}\n'.format(control_sequencing_coverage))
+		#output.write('Test_Estimated_Sequencing_Coverage:{}\n'.format(test_sequencing_coverage))
+		#variant_type_counts.to_csv(output, sep=':', index=True)
 		output.write('Alpha:{}\n'.format(ALPHA))
 		output.write('Adjusted alpha value with bonferroni correction by n={}\n'.format(sample_count))
 		variant_call_info_dataframe.to_csv(output, sep='\t', index=True)
