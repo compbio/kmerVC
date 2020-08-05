@@ -28,14 +28,14 @@ and proceed with the installation of bedtools and jellyfish in this virtual envi
 Using the Anaconda Python Distribution, this can be done with the command:
 
 ```
-conda install -c bioconda bedtools
+conda install -c bioconda bedtools=2.25.0
 ```
 
 ### Jellyfish
-The k-mer counting command line program can be installed from their respective github release at: https://github.com/gmarcais/Jellyfish. Follow their up-to-date installation instructions to download the Jellyfish software. Finally, ensure that the jellyfish program is added to your path with the shell command (replacing X with number of downloaded version):
+The k-mer counting command line program can be installed from the respective github release at: https://github.com/gmarcais/Jellyfish/releases/tag/v2.2.6. Follow their up-to-date installation instructions to download the Jellyfish software. Finally, ensure that the jellyfish program is added to your path with the shell command (replacing X with number of downloaded version):
 
 ```
-export PATH=/programs/jellyfish-2.2.X/bin:$PATH
+export PATH=/programs/jellyfish-2.2.6/bin:$PATH
 ```
 
 ## Script Command Line Usage
