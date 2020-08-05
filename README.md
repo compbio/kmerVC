@@ -1,6 +1,23 @@
 # Utilizing k-mer counts for somatic mutation calls
 This repo contains the kmerVC software scripts that function to evaluate the somatic mutation validity of a set of variants as input. The code here was used to produce the results in the paper "Feasibility of k-mers counts for somatic mutation calls", which is currently in submission. The lab software page for kmerVC can be accessed [here.](https://dna-discovery.stanford.edu/research/software/kmervc/)
 
+## Installation and testing run
+- git clone https://github.com/compbio/kmerVC.git
+- Navigate into TEST directory and download test.zip from https://dna-discovery.stanford.edu/publicmaterial/software/kmervc/ and unzip test.zip.
+- Install bedtools and Jellfish. See Requirments below.
+- You need several Python pacakges inlcuding pandas. See Requirments below.
+- Type the following command that starts with jellyfish outcomes at TEST directory:
+```
+python ../kmervc.py compare -k 30 -j1 tumor_30mer.jf -j2 normal_30mer.jf -b variants.bed -o test -fi chrT.fa
+```
+
+Type the following command that starts with fastq files:
+```
+python ../kmervc.py compare -k 30 -t1 tumor-1.fq -t2 tumor-2.fq -c1 normal-1.fq -c2 normal-2.fq -b variants.bed -o example_1 -fi chrT.fa
+```
+- These commands will generate 
+
+
 ## Requirements
 This code has been tested with the following software versions:
 * Python 2.7.13
