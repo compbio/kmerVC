@@ -20,11 +20,11 @@ python ../kmervc.py compare -k 30 -t1 tumor-1.fq -t2 tumor-2.fq -c1 normal-1.fq 
 
 ## Requirements
 This code has been tested with the following software versions:
-* Python 2.7.13
+* Python 2.7.13 and Python 3.6
 * Pandas 0.20.3
 * Numpy 1.13.1
 * Scipy 0.19.1
-* Bedtools 2.25.0
+* Bedtools 2.29.2
 * Jellyfish 2.2.6
 
 Aside from bedtools and Jellyfish, we recommend using the Anaconda Python Distribution to install all the required packages. The standard instructions from the providers of each package can be used. As for bedtools and Jellyfish, the respective installation instructions are outlined below. For the above installation a requirements.txt document has been created to streamline the process. Creation of a virtual environment with package nstallation can be carried out by with the command:
@@ -45,7 +45,7 @@ and proceed with the installation of bedtools and jellyfish in this virtual envi
 Using the Anaconda Python Distribution, this can be done with the command:
 
 ```
-conda install -c bioconda bedtools=2.25.0
+conda install -c bioconda bedtools=2.29.2
 ```
 
 ### Jellyfish
