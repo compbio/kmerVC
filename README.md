@@ -20,7 +20,7 @@ python ../kmervc.py compare -k 30 -t1 tumor-1.fq -t2 tumor-2.fq -c1 normal-1.fq 
 
 ## Requirements
 This code has been tested with the following software versions:
-* Python 2.7.13
+* Python 3.6 or 2.7.13
 * Pandas 0.20.3
 * Numpy 1.13.1
 * Scipy 0.19.1
