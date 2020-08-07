@@ -70,7 +70,7 @@ def get_arg_parser():
 
 	parser.add_argument('-fi', '--reference_genome_fasta', dest='reference_genome_fasta', help='Reference genome fasta file to use, if different than default')
 	parser.add_argument('-d', '--delimiter', dest='delimiter', help='Delimiter to use in final analysis table. Pick from TAB, COMMA, SPACE')
-	parser.add_argument('-m', '--microsatellite', action='store_true', help='Flag indicating if doing microsequence analysis with respective vcf file')
+	parser.add_argument('-m', '--multiple_mutations', action='store_true', help='Flag indicating whether consecutive mutations in overlapping regions should be considered in combination.')
 	parser.add_argument('-r', '--rna', action='store_true', help='Flag indicating if doing RNA analysis')
 	parser.add_argument('-poi', '--poisson', action='store_true', help='Flag indicating if using doing poisson distribution for variant analysis')
 	parser.add_argument('-a', '--alpha', dest='alpha', default=0.01, type=float, required=not is_compare, help='Alpha value used in hypothesis testing')
@@ -229,7 +229,7 @@ def make_variant_bed_file(variants_dataframe, args):
 	variants_dataframe.to_csv(os.path.join(output_path, 'variants.bed'), sep='\t', index=False, header=False)
 	os.system('sort -V {} >{}'.format(os.path.join(output_path, 'variants.bed'), os.path.join(output_path, 'sorted_variants.bed')))
 	os.system('bedtools merge -c 2,3,4,5,6,7 -o collapse -i {} >{}'.format(os.path.join(output_path, 'sorted_variants.bed'), os.path.join(output_path, 'merged_variants.bed')))
-	variants_file = os.path.join(output_path, 'sorted_variants.bed') if args.microsatellite else os.path.join(output_path, 'merged_variants.bed')
+	variants_file = os.path.join(output_path, 'merged_variants.bed') if args.multiple_mutations else os.path.join(output_path, 'sorted_variants.bed')
 	new_variants_dataframe = pd.read_csv(variants_file, sep='\t', header=None)
 	if new_variants_dataframe.shape[1] == MERGED_TABLE_COLUMN_COUNT:
 		new_variants_dataframe.rename(columns={
@@ -276,9 +276,9 @@ def filter_variants(variants_dataframe, args):
 def get_split_columns(dataframe, column_name):
 	return dataframe[column_name].str.split(',', expand=True)
 
-def filter_multiple_mutations(single_mutations, multiple_mutations, kmer_size, microsatellite):
+def filter_multiple_mutations(single_mutations, multiple_mutations, kmer_size, consider_multiple_mutations):
 	two_mutations = pd.DataFrame(columns=multiple_mutations.columns.values)
-	if microsatellite: return single_mutations, two_mutations	# no filtering necessary since merged entries are irrelevant
+	if not consider_multiple_mutations: return single_mutations, two_mutations	# no filtering necessary since merged entries are irrelevant
 	new_single_mutations, new_two_mutations = [], []
 	for index, row in multiple_mutations.iterrows():	# row iteration required due to variable mutation merge lengths
 		wildtypes, mutations = get_split_columns(multiple_mutations, 'wildtype'), get_split_columns(multiple_mutations, 'mutation')
@@ -341,14 +341,14 @@ def extract_variant_sequences(single_mutations, two_mutations, args):
 	os.system('bedtools getfasta -fi {} -fo {} -bed {} -nameOnly'.format(GENOME_FASTA, single_variant_fasta, single_variant_bed))
 	two_variant_bed = get_output_name('two_variants.bed')
 	two_variant_fasta = get_output_name('two_variants.fa')
-	if not args.microsatellite:
+	if args.multiple_mutations:
 		two_mutations.drop(['all_starts', 'all_ends', 'all_original_starts', 'all_original_ends', 'wildtype', 'mutation'], axis=1, inplace=True)
 		two_mutations.to_csv(two_variant_bed, sep='\t', index=False, header=False)
 		os.system('bedtools getfasta -fi {} -fo {} -bed {} -nameOnly'.format(GENOME_FASTA, two_variant_fasta, two_variant_bed))
 	return single_variant_fasta, two_variant_fasta
 
 
-def make_mutation_sequences(single_variant_fasta, two_variant_fasta, kmer_size, output_name, microsatellite):
+def make_mutation_sequences(single_variant_fasta, two_variant_fasta, kmer_size, output_name, multiple_mutations):
 	def modified_single_variant_sequences(fasta_entry_name, sequence):
 		chromosome, original_start, original_end, wildtype, mutation, start, end = fasta_entry_name.split('_')
 		is_insertion, is_deletion = wildtype == '-', mutation == '-'
@@ -422,7 +422,7 @@ def make_mutation_sequences(single_variant_fasta, two_variant_fasta, kmer_size, 
 	wildtype_output, mutation_output = open(wildtype_path, 'w+'), open(mutation_path, 'w+')
 	write_output(single_variant_sequences, wildtype_output, False)
 	write_output(single_variant_sequences, mutation_output, True)
-	if not microsatellite:
+	if multiple_mutations:
 		two_variant_sequences = open_and_read_file(two_variant_fasta, modified_two_variant_sequences)
 		write_output(two_variant_sequences, wildtype_output, False)
 		write_output(two_variant_sequences, mutation_output, True)
@@ -731,7 +731,7 @@ def create_variant_call_summary_table(variant_call_info_dataframe, command_args,
 		penultimate_variant_call_info_dataframe.to_csv(output, sep='\t', index=True)
 	with open(os.path.join(CWD, '{}_variant_summary_table.txt'.format(output_name)), 'w+') as output:
 		output.write('Command:{}\n'.format(' '.join(['python'] + command_args)))
-		if using_control_sample: variant_type_counts.to_csv(output, sep=':', index=True)
+		if using_control_sample: variant_type_counts.to_csv(output, sep=':', index=True, header=False)
 			#output.write('Control_Estimated_Sequencing_Coverage:{}\n'.format(control_sequencing_coverage))
 		#output.write('Test_Estimated_Sequencing_Coverage:{}\n'.format(test_sequencing_coverage))
 		#variant_type_counts.to_csv(output, sep=':', index=True)

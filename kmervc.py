@@ -19,9 +19,9 @@ def perform_compare(args):
 	variants_dataframe, original_dataframe = construct_variants_dataframe(args)	# consolidates vcf/bed into one standard dataframe
 	variants_dataframe = make_variant_bed_file(variants_dataframe, args)	# handles sorting/merging/writing new variants dataframe
 	single_mutations, multiple_mutations = filter_variants(variants_dataframe, args)
-	single_mutations, two_mutations = filter_multiple_mutations(single_mutations, multiple_mutations, args.kmer_size, args.microsatellite)
+	single_mutations, two_mutations = filter_multiple_mutations(single_mutations, multiple_mutations, args.kmer_size, args.multiple_mutations)
 	single_variant_fasta, two_variant_fasta = extract_variant_sequences(single_mutations, two_mutations, args)
-	wildtype_sequence_file, mutation_sequence_file = make_mutation_sequences(single_variant_fasta, two_variant_fasta, args.kmer_size, args.output_name, args.microsatellite)
+	wildtype_sequence_file, mutation_sequence_file = make_mutation_sequences(single_variant_fasta, two_variant_fasta, args.kmer_size, args.output_name, args.multiple_mutations)
 	kmer_frequency_files = query_sequences(wildtype_sequence_file, mutation_sequence_file, args.output_name, jellyfish_test, jellyfish_control)
 	variant_info_dataframe = construct_variant_information_table(kmer_frequency_files, args.kmer_size, jellyfish_control, wildtype_sequence_file, mutation_sequence_file)
 	variant_call_info_dataframe = hypothesis_test(variant_info_dataframe, args.kmer_size, args.poisson, jellyfish_control, args.output_name)
