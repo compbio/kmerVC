@@ -338,13 +338,13 @@ def extract_variant_sequences(single_mutations, two_mutations, args):
 	single_variant_bed = get_output_name('single_variants.bed')
 	single_variant_fasta = get_output_name('single_variants.fa')
 	single_mutations.to_csv(single_variant_bed, sep='\t', index=False, header=False)
-	os.system('bedtools getfasta -fi {} -fo {} -bed {} -nameOnly'.format(GENOME_FASTA, single_variant_fasta, single_variant_bed))
+	os.system('bedtools getfasta -fi {} -fo {} -bed {} -name'.format(GENOME_FASTA, single_variant_fasta, single_variant_bed))
 	two_variant_bed = get_output_name('two_variants.bed')
 	two_variant_fasta = get_output_name('two_variants.fa')
 	if args.multiple_mutations:
 		two_mutations.drop(['all_starts', 'all_ends', 'all_original_starts', 'all_original_ends', 'wildtype', 'mutation'], axis=1, inplace=True)
 		two_mutations.to_csv(two_variant_bed, sep='\t', index=False, header=False)
-		os.system('bedtools getfasta -fi {} -fo {} -bed {} -nameOnly'.format(GENOME_FASTA, two_variant_fasta, two_variant_bed))
+		os.system('bedtools getfasta -fi {} -fo {} -bed {} -name'.format(GENOME_FASTA, two_variant_fasta, two_variant_bed))
 	return single_variant_fasta, two_variant_fasta
 
 
