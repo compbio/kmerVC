@@ -29,8 +29,9 @@ TEST_P_VALUE_COL_NAME = 'Test_P_Val'
 VARIANT_CALL_COL_NAME = 'Variant_Call'
 WILDTYPE_UNIQUE_COUNT_COL_NAME = 'Wildtype_Unique_Count'
 MUTATION_ZERO_COUNT_COL_NAME = 'Mutation_Unique_Count'
-SUFFICIENT_DATA_MINIMUM_KMERS = 5	# minimum count of unique kmers required for to analyze variant call
+SUFFICIENT_DATA_MINIMUM_KMERS = 5	# minimum count of unique kmers required to analyze variant call
 SEQUENCE_ERROR_PROBABILITY = 0.01
+SEQUENCE_ERROR_PROBABILITY_INDEL = 0.01
 ALPHA = 0.01
 
 
@@ -65,15 +66,17 @@ def get_arg_parser():
 	jellyfish_group.add_argument('-j1', '--jellyfish_test', dest='jellyfish_test', help='Jellyfish file of test input')
 	jellyfish_group.add_argument('-j2', '--jellyfish_control', dest='jellyfish_control', help='Jellyfish file of control input')
 
+	parser.add_argument('-c', '--cutoff', dest='cutoff', default=5, type=int, required=False, help='Cutoff threshold for minimum number of unique kmers required to analyze a variant call.')
 	parser.add_argument('-k', '--kmer_size', dest='kmer_size', required=is_compare, type=int, help='Size of kmer to use for analysis')
 	parser.add_argument('-o', '--output_name', dest='output_name', required=is_compare, help='Output file directory name')
 
 	parser.add_argument('-fi', '--reference_genome_fasta', dest='reference_genome_fasta', help='Reference genome fasta file to use, if different than default')
 	parser.add_argument('-d', '--delimiter', dest='delimiter', help='Delimiter to use in final analysis table. Pick from TAB, COMMA, SPACE')
 	parser.add_argument('-m', '--multiple_mutations', action='store_true', help='Flag indicating whether consecutive mutations in overlapping regions should be considered in combination.')
-	parser.add_argument('-r', '--rna', action='store_true', help='Flag indicating if doing RNA analysis')
 	parser.add_argument('-poi', '--poisson', action='store_true', help='Flag indicating if using doing poisson distribution for variant analysis')
 	parser.add_argument('-a', '--alpha', dest='alpha', default=0.01, type=float, required=not is_compare, help='Alpha value used in hypothesis testing')
+	parser.add_argument('-e', '--sequencing_error_rate', dest='sequence_error_sub', default=0.01, type=float, required=False, help='Sequencing error rate used for substitutions.')
+	parser.add_argument('-ei', '--sequencing_error_rate_indel', dest='sequence_error_indel', default=0.01, type=float, required=False, help='Sequencing error rate used for indels.')
 
 	parser.add_argument('-p', '-penultimate', dest='penultimate', help='Penultimate final table to make assessments on.', required=not is_compare)
 	return parser
@@ -144,13 +147,13 @@ def create_jellyfish(args):
 	return test_output_filename, control_output_filename
 
 
-def setup_output_directory(output_folder_name, reference_genome_fasta_file, kmer_size, alpha):
-	global GENOME_JELLYFISH, GENOME_FASTA, ALPHA
+def setup_output_directory(output_folder_name, reference_genome_fasta_file, kmer_size, alpha, cutoff_threshold, sequence_error_sub, sequence_error_indel):
+	global GENOME_JELLYFISH, GENOME_FASTA, ALPHA, SUFFICIENT_DATA_MINIMUM_KMERS, SEQUENCE_ERROR_PROBABILITY, SEQUENCE_ERROR_PROBABILITY_INDEL 
 	logging.info('Setting up output directory.')
 	if os.path.isdir(output_folder_name): shutil.rmtree(output_folder_name)	# remove existing output folder if it exists
 	output_path = os.path.join(CWD, output_folder_name)
 	os.mkdir(output_path)
-	ALPHA = alpha
+	ALPHA, SUFFICIENT_DATA_MINIMUM_KMERS, SEQUENCE_ERROR_PROBABILITY, SEQUENCE_ERROR_PROBABILITY_INDEL = alpha, cutoff_threshold, sequence_error_sub, sequence_error_indel
 	if reference_genome_fasta_file:
 		GENOME_FASTA = reference_genome_fasta_file	# update genome fasta given user provided input
 		filename, file_extension = os.path.splitext(GENOME_FASTA)
@@ -584,7 +587,7 @@ def hypothesis_test(variant_info_dataframe, kmer_size, using_poisson, using_cont
 			is_indel = wildtype == '-' or mutation == '-'
 			indel_size = len(wildtype.replace('-', '')) - len(mutation.replace('-', ''))
 			power = 1 # + 0.25 * (indel_size - 1) if is_indel else 1
-			sequence_error_probability = np.power(SEQUENCE_ERROR_PROBABILITY, power)
+			sequence_error_probability = np.power(SEQUENCE_ERROR_PROBABILITY_INDEL, power) if is_indel else np.power(SEQUENCE_ERROR_PROBABILITY, power)
 			total_control_kmer_count = row[WILDTYPE_CONTROL_COUNT_COL_NAME] + row[MUTATION_CONTROL_COUNT_COL_NAME]
 			mutation_count_mean_estimate = total_control_kmer_count * np.power(1 - sequence_error_probability, kmer_size - 1) * (sequence_error_probability / 3)
 
@@ -603,7 +606,7 @@ def hypothesis_test(variant_info_dataframe, kmer_size, using_poisson, using_cont
 			is_indel = wildtype == '-' or mutation == '-'
 			indel_size = len(wildtype.replace('-', '')) - len(mutation.replace('-', ''))
 			power = 1 # + 0.25 * (indel_size - 1) if is_indel else 1
-			sequence_error_probability = np.power(SEQUENCE_ERROR_PROBABILITY, power)
+			sequence_error_probability = np.power(SEQUENCE_ERROR_PROBABILITY_INDEL, power) if is_indel else np.power(SEQUENCE_ERROR_PROBABILITY, power)
 			total_test_kmer_count = row[WILDTYPE_TEST_COUNT_COL_NAME] + row[MUTATION_TEST_COUNT_COL_NAME]
 			mutation_count_mean_estimate = total_test_kmer_count * np.power(1 - sequence_error_probability, kmer_size - 1) * (sequence_error_probability / 3)
 			if np.int(row[MUTATION_TEST_COUNT_COL_NAME]) > 0: # Need > 0 trials to perform binomial test
@@ -643,7 +646,7 @@ def hypothesis_test(variant_info_dataframe, kmer_size, using_poisson, using_cont
 			is_indel = wildtype == '-' or mutation == '-'
 			indel_size = len(wildtype.replace('-', '')) - len(mutation.replace('-', ''))
 			power = 1 # + 0.25 * (indel_size - 1) if is_indel else 1
-			sequence_error_probability = np.power(SEQUENCE_ERROR_PROBABILITY, power)
+			sequence_error_probability = np.power(SEQUENCE_ERROR_PROBABILITY_INDEL, power) if is_indel else np.power(SEQUENCE_ERROR_PROBABILITY, power)
 			total_test_kmer_count = row[WILDTYPE_TEST_COUNT_COL_NAME] + row[MUTATION_TEST_COUNT_COL_NAME]
 			mutation_count_mean_estimate = total_test_kmer_count * np.power(1 - sequence_error_probability, kmer_size - 1) * (sequence_error_probability / 3)
 

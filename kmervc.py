@@ -15,7 +15,7 @@ def perform_compare(args):
 	jellyfish_test, jellyfish_control = args.jellyfish_test, args.jellyfish_control
 	if not args.jellyfish_test and not args.jellyfish_control:  # jellyfish not provided
 		jellyfish_test, jellyfish_control = create_jellyfish(args)
-	setup_output_directory(args.output_name, args.reference_genome_fasta, args.kmer_size, args.alpha)
+	setup_output_directory(args.output_name, args.reference_genome_fasta, args.kmer_size, args.alpha, args.cutoff, args.sequence_error_sub, args.sequence_error_indel)
 	variants_dataframe, original_dataframe = construct_variants_dataframe(args)	# consolidates vcf/bed into one standard dataframe
 	variants_dataframe = make_variant_bed_file(variants_dataframe, args)	# handles sorting/merging/writing new variants dataframe
 	single_mutations, multiple_mutations = filter_variants(variants_dataframe, args)
