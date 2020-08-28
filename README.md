@@ -54,6 +54,11 @@ The k-mer counting command line program can be installed from the respective git
 ```
 export PATH=/programs/jellyfish-2.2.6/bin:$PATH
 ```
+Using the Anaconda Python Distribution, this can be done with the command:
+```
+conda config --add channels conda-forge
+conda install jellyfish
+```
 
 ## Script Command Line Usage
 
