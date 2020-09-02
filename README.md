@@ -111,7 +111,7 @@ _examples/fastq\_start\_example_ directory:
 
 1. Create the jellfyish count file for the reference genome using your desired kmer size and place it in the resources directory with the command:
 ```
-	jellyfish count -m 30 -s 100M -t 24 -C -o ../resources/chrT_30mer.jf ../resources/chrT.fa
+	jellyfish count -m 31 -s 100M -t 24 -C -o ../resources/chrT_31mer.jf ../resources/chrT.fa
 ```
 
 2. For reference, note of all the input arguments to the kmervc.py script used and their significance:
@@ -138,7 +138,7 @@ Finally, we need to specify the desired kmer size for our analysis. In this exam
 Call the program with this command from the _examples/fastq\_start\_example_ directory:
 
 ```
-python ../../kmervc.py compare -k 30 -t1 ../resources/tumor-1.fq -t2 ../resources/tumor-2.fq -c1 ../resources/normal-1.fq -c2 ../resources/normal-2.fq -b ../resources/variants.bed -o example_1 -fi ../resources/chrT.fa
+python ../../kmervc.py compare -k 31 -t1 ../resources/tumor-1.fq -t2 ../resources/tumor-2.fq -c1 ../resources/normal-1.fq -c2 ../resources/normal-2.fq -b ../resources/variants.bed -o example_1 -fi ../resources/chrT.fa
 ```
 
 ## Example 2 - Jellyfish Input File Start
@@ -148,7 +148,7 @@ _examples/jellyfish\_start\_example_ directory:
 
 1. Create the jellfyish count file for the reference genome using your desired kmer size and place it in the resources directory with the command:
 ```
-	jellyfish count -m 30 -s 100M -t 24 -C -o ../resources/chrT_30mer.jf ../resources/chrT.fa
+	jellyfish count -m 31 -s 100M -t 24 -C -o ../resources/chrT_31mer.jf ../resources/chrT.fa
 ```
 
 2. For reference, note of all the input arguments to the kmervc.py script used and their significance:
@@ -165,13 +165,13 @@ We will use these downloaded files in the resource directory as the respective i
    - b : variants.bed
    - fi : chrT.fa
    
-Finally, we need to specify the desired kmer size for our analysis. In this example, we will use 30:
-   - k : 30
+Finally, we need to specify the desired kmer size for our analysis. In this example, we will use 31:
+   - k : 31
     
 Call the program with this command from the _examples/jellyfish\_start\_example_ directory:
 
 ```
-python ../../kmervc.py compare -k 30 -j1 ../resources/tumor.jf -j2 ../resources/normal.jf -b ../resources/variants.bed -o example_2 -fi ../resources/chrT.fa
+python ../../kmervc.py compare -k 31 -j1 ../resources/tumor.jf -j2 ../resources/normal.jf -b ../resources/variants.bed -o example_2 -fi ../resources/chrT.fa
 ```
 
 ### Example 3 - Jellyfish Input With Reference Genome
@@ -181,7 +181,7 @@ _examples/reference\_genome\_example_ directory:
 
 1. Create the jellfyish count file for the reference genome using your desired kmer size and place it in the resources directory with the command:
 ```
-	jellyfish count -m 30 -s 100M -t 24 -C -o ../resources/grch38_canonical_chrs_chrM_30mer.jf ../resources/grch38_canonical_chrs_chrM.fa
+	jellyfish count -m 31 -s 100M -t 24 -C -o ../resources/grch38_canonical_chrs_chrM_31mer.jf ../resources/grch38_canonical_chrs_chrM.fa
 ```
 
 2. For reference, note of all the input arguments to the kmervc.py script used and their significance:
@@ -199,10 +199,10 @@ We will use these downloaded files in the resource directory as the respective i
    - fi : chrT.fa
 
 Finally, we need to specify the desired kmer size for our analysis. In this example, we will use 30:
-   - k : 30
+   - k : 31
 
 Call the program with this command from the _examples/jellyfish\_start\_example_ directory:
 
 ```
-python ../../kmervc.py compare -k 30 -j1 ../resources/tumor.jf -j2 ../resources/normal.jf -b ../resources/genome_variants.bed -o example_3 -fi ../resources/grch38_canonical_chrs_chrM.fa
+python ../../kmervc.py compare -k 31 -j1 ../resources/tumor.jf -j2 ../resources/normal.jf -b ../resources/genome_variants.bed -o example_3 -fi ../resources/grch38_canonical_chrs_chrM.fa
 ```
