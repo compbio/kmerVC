@@ -15,7 +15,7 @@ Type the following command that starts with fastq files:
 ```
 python ../kmervc.py compare -k 31 -t1 tumor-1.fq -t2 tumor-2.fq -c1 normal-1.fq -c2 normal-2.fq -b variants.bed -o example_1 -fi chrT.fa
 ```
-- These commands will generate 
+- These commands will generate final summary tables highlighting the variants and their valdations in addition to directories of all intermediate files created in the process.
 
 
 ## Requirements
@@ -30,10 +30,16 @@ This code has been tested with the following software versions:
 Aside from bedtools and Jellyfish, we recommend using the Anaconda Python Distribution to install all the required packages. The standard instructions from the providers of each package can be used. As for bedtools and Jellyfish, the respective installation instructions are outlined below. For the above installation a requirements.txt document has been created to streamline the process. Creation of a virtual environment with package nstallation can be carried out by with the command:
 
 ```
-conda create --name <envname> --file requirements.txt
+conda create --name <envname> --file python3_requirements.txt
 ```
 
-with the environment name <envname> of your choosing. Activate your newly created virtual environment with:
+if using python3, OR 
+
+```
+conda create --name <envname> --file python2_requirements.txt
+```
+
+if using python2 with the environment name <envname> of your choosing. Activate your newly created virtual environment with:
 
 ```
 source activate <envname>
@@ -62,12 +68,13 @@ conda install jellyfish
 
 ## Script Command Line Usage
 
-usage: kmervc.py [-h] (-v VCF_INPUT | -b BED_INPUT) [-t1 TEST\_FASTQ1]
-                 [-t2 TEST_FASTQ2] [-c1 CONTROL_FASTQ1] [-c2 CONTROL_FASTQ2]
-                 [-j1 JELLYFISH_TEST] [-j2 JELLYFISH_CONTROL] -k KMER_SIZE -o
-                 OUTPUT_NAME [-fi REFERENCE_GENOME_FASTA] [-d DELIMITER] [-m]
-                 [-r] [-poi] [-a ALPHA]
-                 {compare}
+usage: kmervc.py [-h] [-v VCF\_INPUT | -b BED\_INPUT] [-t1 TEST\_FASTQ1]
+	             [-t2 TEST\_FASTQ2] [-c1 CONTROL\_FASTQ1] [-c2 CONTROL\_FASTQ2]
+                 [-j1 JELLYFISH\_TEST] [-j2 JELLYFISH\_CONTROL] [-c CUTOFF]
+                 [-k KMER\_SIZE] [-o OUTPUT\_NAME] [-fi REFERENCE\_GENOME\_FASTA]
+                 [-d DELIMITER] [-m] [-poi] -a ALPHA [-e SEQUENCE\_ERROR\_SUB]
+                 [-ei SEQUENCE\_ERROR\_INDEL] -p PENULTIMATE
+                 {compare,assess} 
 
 required positional arguments:{compare}
 
@@ -93,10 +100,11 @@ jellyfish\_group: jellyfish input files
 optional arguments:
   - -h, --help            show this help message and exit
   - -fi, --reference\_genome\_fasta REFERENCE\_GENOME\_FASTA : Reference genome fasta file to use, if different than default
-  - -m, --microsatellite  Flag : indicating if doing microsequence analysis with : respective vcf file
-  - -r, --rna             Flag : indicating if doing RNA analysis
+  - -m, --multiple\_mutations  Flag : indiciating whether consecutive mutations in overlapping regions should be considered in combination.
   - -poi, --poisson       Flag : indicating if using doing poisson distribution : for variant analysis
-  - -a, --alpha ALPHA : Alpha value used in hypothesis testing
+  - -a, --alpha ALPHA : Alpha value used in hypothesis testing. Defaults to 0.01.
+  - -e, --sequencing\_error\_rate SEQUENCE\_ERROR\_SUB : Value indiciating sequencing error rate used for substitutions. Defaults to 0.01.
+  - -ei, --sequencing\_error\_rate\_indel SEQUENCE\_ERROR\_INDEL : Value indiciating sequencing error rate used for indels. Defaults to 0.01.
 
 ### Examples
 
