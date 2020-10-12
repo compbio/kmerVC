@@ -105,6 +105,7 @@ optional arguments:
   - -a, --alpha ALPHA : Alpha value used in hypothesis testing. Defaults to 0.01.
   - -e, --sequencing\_error\_rate SEQUENCE\_ERROR\_SUB : Value indiciating sequencing error rate used for substitutions. Defaults to 0.01.
   - -ei, --sequencing\_error\_rate\_indel SEQUENCE\_ERROR\_INDEL : Value indiciating sequencing error rate used for indels. Defaults to 0.01.
+  - -c, --cutoff : Cutoff threshold for minimum number of unique kmers required to analyze a variant call.
 
 ### Examples
 
