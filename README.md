@@ -7,6 +7,7 @@ This repo contains the kmerVC software scripts that function to evaluate the som
 - Install bedtools and Jellfish. See Requirments below.
 - You need several Python pacakges inlcuding pandas. See Requirments below.
 - Type the following command that starts with jellyfish outcomes at TEST directory:
+- 
 ```
 python ../kmervc.py compare -k 31 -j1 tumor_31mer.jf -j2 normal_31mer.jf -b variants.bed -o test -fi chrT.fa
 ```
