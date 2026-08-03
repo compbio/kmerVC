@@ -1,0 +1,10 @@
+# 21G of regenerable pipeline data — reads, jellyfish indexes, references.
+# Confirmed regenerable 2026-08-03; see Workspace/AGENTS.md → Backup.
+revival/
+
+*.jf
+*.fastq
+*.fastq.gz
+__pycache__/
+*.pyc
+.DS_Store
